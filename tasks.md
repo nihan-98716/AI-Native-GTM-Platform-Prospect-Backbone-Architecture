@@ -8,47 +8,47 @@ Status: Completed
 Task: Define immutable architecture baseline
 Priority: P0
 Dependencies: Phase 0 planning artifacts
-Status: Pending
+Status: Completed
 
 Task: Draft `docs/architecture.md` with Mermaid diagrams
 Priority: P0
 Dependencies: Define immutable architecture baseline
-Status: Pending
+Status: Completed
 
 Task: Define contract artifact inventory under `/backbone/app/contracts`
 Priority: P0
 Dependencies: Define immutable architecture baseline
-Status: Pending
+Status: Completed
 
 Task: Define tenant isolation enforcement strategy
 Priority: P0
 Dependencies: Define immutable architecture baseline
-Status: Pending
+Status: Completed
 
 Task: Define async workflow/job execution strategy
 Priority: P0
 Dependencies: Define immutable architecture baseline
-Status: Pending
+Status: Completed
 
 Task: Define observability and audit contracts
 Priority: P0
 Dependencies: Define immutable architecture baseline
-Status: Pending
+Status: Completed
 
 Task: Staff Architecture Review after Phase 1
 Priority: P0
 Dependencies: `docs/architecture.md`
-Status: Pending
+Status: Completed
 
 Task: Principal Engineer Review after Phase 1
 Priority: P0
 Dependencies: `docs/architecture.md`
-Status: Pending
+Status: Completed
 
 Task: Scalability Review after Phase 1
 Priority: P0
 Dependencies: `docs/architecture.md`
-Status: Pending
+Status: Completed
 
 # Backlog
 
@@ -132,7 +132,17 @@ Priority: P0
 Dependencies: Database schema
 Status: Pending
 
-Task: Evaluate PostgreSQL Row Level Security for tenant-owned tables
+Task: Document PostgreSQL RLS deferral and compensating controls in migration assumptions
+Priority: P0
+Dependencies: Database schema
+Status: Pending
+
+Task: Implement mandatory tenant-aligned foreign keys for core tenant-owned relationships
+Priority: P0
+Dependencies: Database schema
+Status: Pending
+
+Task: Add `custom_field_definitions` schema and validation assumptions
 Priority: P0
 Dependencies: Database schema
 Status: Pending
@@ -148,6 +158,16 @@ Dependencies: Workflow contracts and persistence entities
 Status: Pending
 
 Task: Implement retry, timeout, cancellation, idempotency, and backpressure handling
+Priority: P0
+Dependencies: Redis-backed worker execution
+Status: Pending
+
+Task: Implement worker watchdog for stuck jobs, timeout marking, lock release, telemetry, and audit events
+Priority: P0
+Dependencies: Redis-backed worker execution
+Status: Pending
+
+Task: Implement lightweight admission control with per-tenant workflow limits, queue thresholds, 202 deferred responses, and 429 rejection behavior
 Priority: P0
 Dependencies: Redis-backed worker execution
 Status: Pending
@@ -197,6 +217,16 @@ Priority: P0
 Dependencies: Integration framework
 Status: Pending
 
+Task: Implement provider auth variants for `api_key`, `oauth2`, and `manual_config`
+Priority: P0
+Dependencies: Integration framework
+Status: Pending
+
+Task: Persist `source_provider`, `source_type`, `ingestion_timestamp`, and `source_record_id` on imported or generated records where provenance is required
+Priority: P0
+Dependencies: Integration framework
+Status: Pending
+
 Task: Build Prospect UI workflow
 Priority: P1
 Dependencies: Backend Prospect APIs
@@ -222,6 +252,16 @@ Priority: P1
 Dependencies: Observability implementation
 Status: Pending
 
+Task: Enforce observability metric cardinality rules
+Priority: P1
+Dependencies: Observability implementation
+Status: Pending
+
+Task: Implement centralized audit service contract for services, workers, agents, integrations, and approvals
+Priority: P0
+Dependencies: Audit event schema
+Status: Pending
+
 Task: Write `docs/agents.md`, `docs/integrations.md`, and root `README.md`
 Priority: P0
 Dependencies: Implementation details stabilized
@@ -235,6 +275,16 @@ Status: Pending
 Task: Ensure saved traces exclude hidden chain-of-thought and include decision summaries, rationale summaries, tool calls, state transitions, validation results, inputs, outputs, and final decisions
 Priority: P0
 Dependencies: Trace persistence
+Status: Pending
+
+Task: Apply minimum v1 trace redaction for API keys, tokens, credentials, auth headers, and secrets
+Priority: P0
+Dependencies: Trace persistence
+Status: Pending
+
+Task: Implement approval states `pending`, `approved`, `rejected`, and `expired` with reviewer, timestamp, and reason fields
+Priority: P0
+Dependencies: Workflow and approval schemas
 Status: Pending
 
 # Technical Debt
@@ -295,7 +345,7 @@ Risk: Long-running workflows may overload API request handlers if async executio
 Mitigation: Use Redis-backed workers, workflow status tracking, timeouts, retries, cancellation, idempotency keys, and queue backpressure controls.
 Status: Open
 
-Risk: Trace data may expose sensitive information or imply raw chain-of-thought logging.
+Risk: Trace data may expose sensitive information or imply private reasoning log capture.
 Mitigation: Store decision summaries, rationale summaries, tool calls, state transitions, validation results, inputs, outputs, and final decisions only; design redaction and retention policies.
 Status: Open
 

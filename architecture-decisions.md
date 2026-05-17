@@ -124,7 +124,7 @@ Alternatives Considered:
 - pgvector: simpler operational footprint, but ChromaDB aligns with the requested stack.
 - No vector store: acceptable for v1 but weaker AI-native architecture.
 
-## ADR-007: Tenant Isolation Strategy
+## ADR-007: Tenant Isolation Enforcement Strategy
 
 Status: Accepted
 
@@ -132,18 +132,18 @@ Context:
 The platform is multi-tenant from the first challenge. Tenant isolation cannot depend only on route-level checks because future modules and integrations will add new query paths.
 
 Decision:
-Use layered tenant isolation across request, service, repository, and database layers. Every tenant-owned entity must include `tenant_id`. Tenant-scoped uniqueness must use composite unique constraints that include `tenant_id`. Foreign-key relationships between tenant-owned entities should include tenant alignment where practical, either through composite foreign keys or explicit database constraints. Repositories must require tenant context and apply tenant filters by default. Service methods must authorize tenant and permission scope before invoking repositories. Request handling must derive tenant context from validated JWT claims. PostgreSQL Row Level Security will be evaluated during Phase 1 and either adopted for tenant-owned tables or explicitly deferred with compensating controls.
+Use layered tenant isolation across request, service, repository, and database layers. PostgreSQL Row Level Security is deferred for this challenge to keep local review and migration behavior predictable while schema foundations are established. Every tenant-owned entity must include `tenant_id`. Tenant-scoped uniqueness must use composite unique constraints that include `tenant_id`. Core tenant-owned relationships must use tenant-aligned foreign keys or equivalent database constraints. Mandatory tenant-aligned constraints apply to accounts, contacts, opportunities, activities, signals, workflow runs, workflow steps, integration runs, tool calls, and approval requests. Exceptions require explicit justification. Repositories must require tenant context and apply tenant filters by default. Service methods must authorize tenant and permission scope before invoking repositories. Request handling must derive tenant context from validated JWT claims. Negative isolation tests are required at API and repository layers.
 
 Consequences:
 - Tenant filtering becomes a mandatory platform invariant rather than a convention.
 - Negative isolation tests can prove cross-tenant access is blocked at repository and API layers.
 - Composite keys and constraints add schema complexity but reduce data leakage risk.
-- Optional RLS evaluation preserves the current stack while allowing stronger database enforcement if it fits the delivery timeline.
+- RLS can be adopted later as an additive hardening step, but Phase 2 migrations assume shared tenant-owned tables with composite tenant constraints.
 
 Alternatives Considered:
 - Repository filters only: simpler but too easy to bypass.
 - Separate database per tenant: strong isolation but operationally heavy for the challenge and later local review.
-- RLS only: strong data-layer protection, but still requires request/service authorization and careful session context management.
+- RLS now: strong data-layer protection, but adds session-context complexity and migration risk during the challenge.
 
 ## ADR-008: Async Workflow and Job Execution
 
@@ -164,6 +164,25 @@ Consequences:
 Alternatives Considered:
 - Synchronous request execution: simpler but unreliable for real agentic workflows.
 - New workflow service: more scalable later, but it would introduce a major service before the architecture freeze.
+
+## ADR-008A: Workflow Recovery and Job Lifecycle
+
+Status: Accepted
+
+Context:
+Redis-backed workers and external LLM/provider calls can fail after a job is marked running. Without recovery semantics, workflows can remain stuck and traces can misrepresent execution.
+
+Decision:
+Use job states `pending`, `running`, `completed`, `failed`, `timed_out`, and `cancelled`. A lightweight watchdog is responsible for detecting stuck jobs by heartbeat age and configured timeouts, marking jobs `timed_out`, releasing locks, emitting telemetry, and writing audit events. Retry policy uses bounded exponential backoff and retryable error classification. Timeout policy is configured per workflow type, workflow step, and external call. Recovery does not introduce a new major service; it runs as part of the worker process.
+
+Consequences:
+- Workflow status remains trustworthy after worker failures.
+- UI and traces can distinguish failed, timed-out, and cancelled runs.
+- Recovery adds implementation discipline around heartbeats and locks.
+
+Alternatives Considered:
+- Manual cleanup only: too brittle for judge review and future production.
+- Dedicated scheduler service: more operationally complex than needed for this challenge.
 
 ## ADR-009: Security Architecture Baseline
 
@@ -193,7 +212,7 @@ Context:
 The platform must be operable and reviewable. Agent workflows, tool calls, integration jobs, and database operations need consistent logs, metrics, traces, and audit boundaries.
 
 Decision:
-Every service log event must include `trace_id`, `correlation_id`, `tenant_id`, `request_id`, `workflow_id` when available, `service`, `status`, and `duration`. Span names use `service.operation`, for example `api.prospect.start`, `agent.value_hypothesis.run`, `tool.integration.search_accounts`, and `db.accounts.query`. Required metrics include `api_requests_total`, `api_request_duration_ms`, `workflow_runs_total`, `workflow_duration_ms`, `workflow_step_duration_ms`, `agent_runs_total`, `agent_tokens_total`, `agent_cost_usd`, `tool_calls_total`, `tool_call_duration_ms`, `integration_requests_total`, `integration_rate_limited_total`, `db_query_duration_ms`, and `errors_total`. Trace and correlation IDs propagate from API requests into workers, agent nodes, tools, repositories, and integration providers. Telemetry records operational behavior; audit logs record user/security/compliance events and must be durable and tamper-resistant in design.
+Every service log event must include `trace_id`, `correlation_id`, `tenant_id`, `request_id`, `workflow_id` when available, `service`, `status`, and `duration`. Span names use `service.operation`, for example `api.prospect.start`, `agent.value_hypothesis.run`, `tool.integration.search_accounts`, and `db.accounts.query`. Required metrics include `api_requests_total`, `api_request_duration_ms`, `workflow_runs_total`, `workflow_duration_ms`, `workflow_step_duration_ms`, `agent_runs_total`, `agent_tokens_total`, `agent_cost_usd`, `tool_calls_total`, `tool_call_duration_ms`, `integration_requests_total`, `integration_rate_limited_total`, `db_query_duration_ms`, and `errors_total`. Metric labels must stay low-cardinality; allowed labels are `service`, `provider`, `status`, and `model`. `tenant_id`, `workflow_id`, `trace_id`, and `request_id` must stay in logs/traces, not metric labels. Trace and correlation IDs propagate from API requests into workers, agent nodes, tools, repositories, and integration providers. Telemetry records operational behavior; audit logs record user/security/compliance events and must be durable and tamper-resistant in design.
 
 Consequences:
 - Reviewers can inspect how work moved through the platform.
@@ -212,7 +231,7 @@ Context:
 Agent traces, integration payloads, contacts, and outreach drafts may contain sensitive business and personal data. Traceability is required, but hidden chain-of-thought and private reasoning logs must not be exposed.
 
 Decision:
-Traceability captures decision summaries, rationale summaries, tool calls, state transitions, validation results, inputs, outputs, and final decisions. The platform must not require hidden chain-of-thought or private reasoning logs. Design for trace redaction, PII classification, encrypted integration tokens, retention rules, and immutable audit logs. Implementation can be incremental, but schemas must preserve the ability to redact sensitive trace fields while retaining reviewable execution evidence.
+Traceability captures decision summaries, rationale summaries, tool calls, state transitions, validation results, inputs, outputs, and final decisions. The platform must not require hidden chain-of-thought or private reasoning logs. Minimum v1 redaction removes API keys, tokens, credentials, authorization headers, cookies, and secrets before persistence. Trace metadata marks PII fields, generated outreach, and provider payloads. Design for trace redaction, PII classification, encrypted integration tokens, retention rules, and immutable audit logs. Implementation can be incremental, but schemas must preserve the ability to redact sensitive trace fields while retaining reviewable execution evidence.
 
 Consequences:
 - The platform satisfies traceability without relying on unavailable or unsafe raw model reasoning.
@@ -241,3 +260,98 @@ Consequences:
 Alternatives Considered:
 - Claim 100k-user readiness now: unrealistic and likely to weaken judge confidence.
 - Ignore 100k entirely: misses the requested review checkpoint.
+
+## ADR-013: Custom Field Governance
+
+Status: Accepted
+
+Context:
+The platform needs custom fields for future extensibility, but ungoverned JSONB fields would create schema drift, inconsistent UI rendering, and unsafe query behavior.
+
+Decision:
+Add planned entity `custom_field_definitions` with `id`, `tenant_id`, `entity_type`, `field_name`, `field_type`, `validation_rules`, `default_value`, and `metadata`. `custom_fields` JSONB values are valid only when governed by definitions for validation, UI rendering, extensibility, and query planning.
+
+Consequences:
+- Tenant customization remains possible without uncontrolled schema drift.
+- UI and API validation can share field definitions.
+- Queryable custom fields can be indexed deliberately instead of indexing every JSONB path.
+
+Alternatives Considered:
+- Free-form JSON only: fastest but likely to require future rewrite.
+- Fully dynamic tenant-created tables: too complex for the first challenge.
+
+## ADR-014: Integration Auth Variants and Provenance
+
+Status: Accepted
+
+Context:
+The integration framework must stay provider-independent. Prospect may use Apollo, HubSpot, Hunter, Gmail, or another real provider depending on available credentials and fit.
+
+Decision:
+Provider contracts support `api_key`, `oauth2`, and `manual_config` auth types. OAuth2 providers must define scopes, token refresh, expiry, connection health, and status behavior. API-key providers must define key validation and rotation behavior. Imported/generated records persist `source_provider`, `source_type`, `ingestion_timestamp`, and `source_record_id`. `source_type` distinguishes `seeded`, `imported`, and `generated` data.
+
+Consequences:
+- Apollo, HubSpot, Hunter, and Gmail can fit the same framework without core rewrites.
+- Reviewers can distinguish seeded data from live provider data.
+- Credential handling remains provider-specific but contract-governed.
+
+Alternatives Considered:
+- API-key-only contract: simpler but underfits OAuth providers.
+- Provider-specific schemas in Prospect: faster initially but breaks integration extensibility.
+
+## ADR-015: Centralized Audit Contract
+
+Status: Accepted
+
+Context:
+Security review requires auditability. If modules emit audit records ad hoc, required events will be inconsistent or missing.
+
+Decision:
+A centralized audit service owns event creation, event formatting, and event persistence. Audit sources include services, workers, agents, integrations, and approvals. Audit event fields are `event_id`, `tenant_id`, `actor`, `action`, `resource`, `timestamp`, and `metadata`.
+
+Consequences:
+- Audit records are consistent across modules.
+- Services and workers can emit security-relevant events without duplicating formatting logic.
+- Audit remains separate from telemetry.
+
+Alternatives Considered:
+- Direct audit table writes from every module: simple but inconsistent.
+- External audit service: unnecessary new service for this challenge.
+
+## ADR-016: Workflow Contract and Ownership Rules
+
+Status: Accepted
+
+Context:
+Services, LangGraph workflows, tools, and repositories must not blur responsibilities as agent behavior grows.
+
+Decision:
+Services own use-case logic, authorization, workflow start, workflow pause, workflow resume, and workflow cancellation. LangGraph owns workflow progression and state transitions. Tools own bounded side effects through approved service, repository, or integration interfaces. Repositories own persistence only. Planned workflow contracts are `workflow_start`, `workflow_pause`, `workflow_resume`, `workflow_cancel`, and `workflow_complete`, each with payload schema, state transition, and validation rules.
+
+Consequences:
+- Business logic remains out of routes, repositories, and provider adapters.
+- Agent workflows can grow without taking over authorization or persistence ownership.
+- Future modules can reuse workflow lifecycle contracts.
+
+Alternatives Considered:
+- Put orchestration entirely in services: weakens agent state modeling.
+- Put authorization and writes inside LangGraph nodes: makes security and testing harder.
+
+## ADR-017: Human-in-the-Loop Approval Semantics
+
+Status: Accepted
+
+Context:
+Agentic workflows need human checkpoints without building a full enterprise review system in the first challenge.
+
+Decision:
+Approval states are `pending`, `approved`, `rejected`, and `expired`. Approval records persist reviewer, timestamp, reason, workflow ID, workflow step ID, and decision payload. Minimum review workflow: agent creates pending approval, UI displays review item, reviewer approves or rejects, workflow resumes or stops with a reason-coded state.
+
+Consequences:
+- Human-in-the-loop behavior is real but scoped.
+- Workflow traces can show approval gates and reviewer decisions.
+- Future collaboration features can extend the model without replacing it.
+
+Alternatives Considered:
+- No approval persistence: insufficient for AI-native traceability.
+- Full task/collaboration system: overbuilt for this challenge.
