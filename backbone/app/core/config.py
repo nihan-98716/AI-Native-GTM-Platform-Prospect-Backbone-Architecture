@@ -26,6 +26,10 @@ class Settings:
     rate_limit_per_minute: int
     auto_seed_on_startup: bool
     seed_dir: str
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4.1-mini"
+    llm_api_key: str | None = None
+    llm_base_url: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -40,6 +44,10 @@ class Settings:
             rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "120")),
             auto_seed_on_startup=_as_bool(os.getenv("AUTO_SEED_ON_STARTUP"), False),
             seed_dir=os.getenv("SEED_DIR", "..\\data"),
+            llm_provider=os.getenv("LLM_PROVIDER", "openai"),
+            llm_model=os.getenv("LLM_MODEL", "gpt-4.1-mini"),
+            llm_api_key=os.getenv("OPENAI_API_KEY"),
+            llm_base_url=os.getenv("OPENAI_BASE_URL"),
         )
 
 

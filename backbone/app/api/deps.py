@@ -4,6 +4,7 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.audit.service import SqlAuditService
+from app.agents.llm import OpenAIChatLLM
 from app.auth import Hs256TokenVerifier, RbacAuthorizer, TokenValidationError
 from app.contracts.api.auth import TokenClaims
 from app.core.config import Settings, get_settings
@@ -11,7 +12,9 @@ from app.core.rate_limit import FixedWindowRateLimiter
 from app.core.tenancy import TenantContext, set_tenant_context
 from app.repositories.account_repository import SqlAccountRepository
 from app.repositories.audit_repository import SqlAuditEventRepository
+from app.repositories.prospect_workflow_repository import SqlProspectWorkflowRepository
 from app.services.accounts import AccountsService
+from app.services.prospect import ProspectWorkflowService
 from app.storage.db import get_session
 
 
@@ -72,4 +75,16 @@ def get_accounts_service(session: Session = Depends(get_db_session)) -> Accounts
 
 def get_audit_service(session: Session = Depends(get_db_session)) -> SqlAuditService:
     return SqlAuditService(repository=SqlAuditEventRepository(session))
+
+
+def get_agent_llm(settings: Settings = Depends(get_settings)) -> OpenAIChatLLM:
+    return OpenAIChatLLM.from_settings(settings)
+
+
+def get_prospect_workflow_service(
+    session: Session = Depends(get_db_session),
+    audit_service: SqlAuditService = Depends(get_audit_service),
+    llm: OpenAIChatLLM = Depends(get_agent_llm),
+) -> ProspectWorkflowService:
+    return ProspectWorkflowService(repository=SqlProspectWorkflowRepository(session), audit_service=audit_service, llm=llm)
 
