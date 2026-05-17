@@ -1,0 +1,17 @@
+version: 1
+tenant_slug: acme-demo
+provenance:
+  source_type: seeded
+  source_provider: seed
+files:
+  tenants: tenants.yaml
+  users: users.yaml
+  personas: personas.yaml
+  icps: icps.yaml
+  accounts: accounts.yaml
+  contacts: contacts.yaml
+  signals: signals.yaml
+  custom_fields: custom_fields.yaml
+  value_hypotheses: value_hypotheses.yaml
+  outreach_drafts: outreach_drafts.yaml
+  workflow_outputs: workflow_outputs.yaml

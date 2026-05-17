@@ -110,12 +110,12 @@ Status: Pending
 Task: Implement PostgreSQL schema, SQLAlchemy models, Alembic migrations, and indexes
 Priority: P0
 Dependencies: Contracts
-Status: Pending
+Status: Completed
 
 Task: Design seed schema for tenants, users, ICPs, personas, accounts, contacts, and signals
 Priority: P0
 Dependencies: Database schema design
-Status: Pending
+Status: Completed
 
 Task: Implement tenant context, JWT validation, RBAC, CORS, rate limiting, and audit logs
 Priority: P0
@@ -130,27 +130,52 @@ Status: Pending
 Task: Implement composite tenant constraints and tenant-scoped unique indexes
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
 
 Task: Document PostgreSQL RLS deferral and compensating controls in migration assumptions
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
 
 Task: Implement mandatory tenant-aligned foreign keys for core tenant-owned relationships
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
 
 Task: Add `custom_field_definitions` schema and validation assumptions
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
 
 Task: Implement workflow run, workflow step, approval request, tool call, integration run, integration connection, sync cursor, audit event, idempotency key, and LLM usage entities
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
+
+Task: Add DB state validation constraints for workflow, approval, integration, auth, source, and job statuses
+Priority: P0
+Dependencies: Database schema
+Status: Completed
+
+Task: Add value hypotheses and outreach drafts generated artifact entities
+Priority: P0
+Dependencies: Database schema
+Status: Completed
+
+Task: Add activity non-orphan and signal strength constraints
+Priority: P0
+Dependencies: Database schema
+Status: Completed
+
+Task: Add sync cursor uniqueness and multiple provider connection strategy
+Priority: P0
+Dependencies: Database schema
+Status: Completed
+
+Task: Expand LLM usage records with model, token, cost, and latency fields
+Priority: P0
+Dependencies: Database schema
+Status: Completed
 
 Task: Implement Redis-backed worker execution with workflow status transitions
 Priority: P0
@@ -247,6 +272,11 @@ Priority: P0
 Dependencies: Tenant isolation implementation
 Status: Pending
 
+Task: Add DB-backed tenant isolation tests for accounts, contacts, workflow runs, and integration connections
+Priority: P0
+Dependencies: Database schema
+Status: Completed
+
 Task: Add observability contract tests for required log fields and trace propagation
 Priority: P1
 Dependencies: Observability implementation
@@ -317,6 +347,11 @@ Status: Deferred
 Task: Implement automated trace redaction, PII classification, retention enforcement, and immutable audit export
 Priority: P2
 Dependencies: Production compliance requirements
+Status: Deferred
+
+Task: Design retention, archival, and partitioning strategy for audit events, tool calls, workflow steps, activities, signals, and LLM usage records
+Priority: P1
+Dependencies: Workflow and observability implementation
 Status: Deferred
 
 # Risks
