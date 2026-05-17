@@ -5,9 +5,14 @@ description = "AI-native GTM platform backbone"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.13.2",
+  "fastapi>=0.115.0",
+  "opentelemetry-api>=1.27.0",
+  "PyJWT>=2.9.0",
+  "PyYAML>=6.0.2",
   "psycopg[binary]>=3.2.1",
   "pydantic>=2.8.2",
   "sqlalchemy>=2.0.32",
+  "uvicorn>=0.30.6",
 ]
 
 [project.optional-dependencies]

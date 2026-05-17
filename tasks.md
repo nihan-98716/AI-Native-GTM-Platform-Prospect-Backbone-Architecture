@@ -55,7 +55,7 @@ Status: Completed
 Task: Create backend project scaffold under `/backbone`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create frontend project scaffold under `/prospect`
 Priority: P1
@@ -70,27 +70,27 @@ Status: Pending
 Task: Define API, DTO, event, agent, tool, integration, workflow, and response contracts under `/backbone/app/contracts`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/api`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/events`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/agents`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/tools`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/integrations`
 Priority: P0
@@ -100,12 +100,12 @@ Status: Pending
 Task: Create `/backbone/app/contracts/workflows`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/responses`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Implement PostgreSQL schema, SQLAlchemy models, Alembic migrations, and indexes
 Priority: P0
@@ -120,12 +120,12 @@ Status: Completed
 Task: Implement tenant context, JWT validation, RBAC, CORS, rate limiting, and audit logs
 Priority: P0
 Dependencies: Core backend scaffold
-Status: Pending
+Status: Completed
 
 Task: Implement repositories with mandatory tenant filters
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
 
 Task: Implement composite tenant constraints and tenant-scoped unique indexes
 Priority: P0
@@ -260,7 +260,7 @@ Status: Pending
 Task: Add automatic seed loader
 Priority: P0
 Dependencies: Database schema
-Status: Pending
+Status: Completed
 
 Task: Add integration, agent, repository, tenant-isolation, and Playwright tests
 Priority: P0
@@ -290,7 +290,7 @@ Status: Pending
 Task: Implement centralized audit service contract for services, workers, agents, integrations, and approvals
 Priority: P0
 Dependencies: Audit event schema
-Status: Pending
+Status: Completed
 
 Task: Write `docs/agents.md`, `docs/integrations.md`, and root `README.md`
 Priority: P0
