@@ -1,3 +1,8 @@
+from app.contracts.workflows.execution import (
+    ProspectWorkflowExecutionState,
+    WorkflowEvidence,
+    WorkflowExecutionResult,
+)
 from app.contracts.workflows.lifecycle import (
     WorkflowCancel,
     WorkflowComplete,
@@ -16,5 +21,8 @@ __all__ = [
     "WorkflowComplete",
     "WorkflowStartInput",
     "WorkflowOutput",
+    "WorkflowEvidence",
+    "WorkflowExecutionResult",
+    "ProspectWorkflowExecutionState",
 ]
 

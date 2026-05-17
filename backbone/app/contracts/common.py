@@ -50,6 +50,13 @@ class TerminalStatus(str, enum.Enum):
     timed_out = "timed_out"
 
 
+class OutreachDraftStatus(str, enum.Enum):
+    draft = "draft"
+    pending_approval = "pending_approval"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class WorkflowTransitionPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -200,32 +200,32 @@ Status: Pending
 Task: Implement LangGraph Prospect workflow
 Priority: P0
 Dependencies: Agent contracts and persistence
-Status: Pending
+Status: Completed
 
 Task: Implement ProspectResearchAgent
 Priority: P0
 Dependencies: LangGraph workflow contracts
-Status: Pending
+Status: Completed
 
 Task: Implement ContactEnrichmentAgent
 Priority: P0
 Dependencies: Integration framework
-Status: Pending
+Status: Completed
 
 Task: Implement IntentSignalAgent
 Priority: P0
 Dependencies: Signal model and integration framework
-Status: Pending
+Status: Completed
 
 Task: Implement ValueHypothesisAgent
 Priority: P0
 Dependencies: Retrieval and agent tool contracts
-Status: Pending
+Status: Completed
 
 Task: Implement OutreachAgent
 Priority: P0
 Dependencies: Value hypotheses and contact/persona model
-Status: Pending
+Status: Completed
 
 Task: Implement one real Prospect-powering integration provider, preferably Apollo
 Priority: P0
