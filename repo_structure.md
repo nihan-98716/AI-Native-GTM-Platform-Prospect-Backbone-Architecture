@@ -87,6 +87,8 @@ Boundary rules:
 - Integrations normalize external payloads into platform DTOs before writes.
 - Contract files under `app/contracts` are created before implementation and define API DTOs, events, agent state, tool IO, integration adapters, workflow state, and response models.
 - Long-running workflows and integration syncs run through worker/job abstractions, not request handlers.
+- Workflow contracts include `workflow_start`, `workflow_pause`, `workflow_resume`, `workflow_cancel`, and `workflow_complete`.
+- Services own use-case logic and workflow lifecycle commands; LangGraph owns workflow progression; tools own bounded side effects; repositories own persistence only.
 
 Testing boundary:
 
@@ -172,6 +174,8 @@ traces/
 ```
 
 Trace files must contain decision summaries, rationale summaries, tool calls, state transitions, validation results, inputs, outputs, and final decisions. They must not require hidden chain-of-thought or private reasoning logs.
+
+Trace files must redact API keys, tokens, credentials, auth headers, and secrets. They should mark PII fields, generated outreach, and provider payloads when present.
 
 ## `/tests`
 
