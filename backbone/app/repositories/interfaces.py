@@ -10,6 +10,7 @@ from app.contracts.tools.prospect import (
     SignalToolRecord,
     ToolCallRecord,
     WorkflowRunToolRecord,
+    WorkflowRunSummary,
     WorkflowStepRecord,
 )
 from app.contracts.workflows.lifecycle import WorkflowStart
@@ -174,5 +175,17 @@ class ProspectWorkflowRepository(Protocol):
         ...
 
     def count_llm_usage(self, *, tenant_id: str, workflow_run_id: str) -> tuple[float, int]:
+        ...
+
+    def list_workflow_runs(self, *, tenant_id: str, limit: int = 50, offset: int = 0) -> Sequence[WorkflowRunSummary]:
+        ...
+
+    def get_workflow_run_summary(self, *, tenant_id: str, workflow_run_id: str) -> WorkflowRunSummary | None:
+        ...
+
+    def list_workflow_steps(self, *, tenant_id: str, workflow_run_id: str) -> Sequence[WorkflowStepRecord]:
+        ...
+
+    def list_tool_calls(self, *, tenant_id: str, workflow_run_id: str) -> Sequence[ToolCallRecord]:
         ...
 

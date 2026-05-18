@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import accounts as accounts_router
 from app.api.v1 import auth as auth_router
 from app.api.v1 import prospect as prospect_router
+from app.api.v1 import workflows as workflows_router
 from app.core.config import get_settings
 from app.observability.logging import request_log_fields
 from app.seed.loader import SeedLoader
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(auth_router.router, prefix="/v1")
 app.include_router(accounts_router.router, prefix="/v1")
 app.include_router(prospect_router.router, prefix="/v1")
+app.include_router(workflows_router.router, prefix="/v1")
 
 
 @app.middleware("http")

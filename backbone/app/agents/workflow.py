@@ -104,6 +104,37 @@ class ProspectWorkflowEngine:
 
         graph = StateGraph(dict)
 
+        def handle_fallback_state(
+            agent_output,
+            current_state: ProspectWorkflowExecutionState,
+            step_name: str,
+        ) -> dict | None:
+            """
+            If agent fallback occurred (trace.status == failed), requeue workflow.
+            Returns updated state dict to short-circuit node, or None to continue.
+            """
+            if agent_output.trace.status != JobStatus.failed:
+                return None
+            
+            updated = current_state.model_copy(
+                update={
+                    "status": WorkflowStatus.queued,
+                    "traces": [*current_state.traces, agent_output.trace],
+                    "evidence": current_state.evidence.model_copy(
+                        update={"trace_ids": [*current_state.evidence.trace_ids, agent_output.trace.trace_id or f"{step_name}-fallback"]}
+                    ),
+                }
+            )
+            persist_state(updated)
+            emit_audit(
+                WorkflowEventType.workflow_paused,
+                current_state.evidence.step_ids[-1] if current_state.evidence.step_ids else None,
+                {"step": step_name, "reason": "Agent fallback; requeued"},
+                trace_id=agent_output.trace.trace_id,
+                correlation_id=agent_output.trace.correlation_id,
+            )
+            return updated.model_dump(mode="json")
+
         def research_node(raw_state: dict) -> dict:
             current = ProspectWorkflowExecutionState.model_validate(raw_state)
             if should_skip(current.current_step, "research") or current.ranked_accounts:
@@ -114,6 +145,12 @@ class ProspectWorkflowEngine:
                 icp_id=current.icp_id,
             )
             output = research_agent.run(payload, context=agent_context(current, "prospect_research_system.txt"))
+            
+            # Check for fallback and requeue if necessary
+            fallback_state = handle_fallback_state(output, current, "research")
+            if fallback_state is not None:
+                return fallback_state
+            
             step = self._tools.add_workflow_step(
                 tenant_id=current.tenant_id,
                 workflow_run_id=current.workflow_run_id,
@@ -183,6 +220,11 @@ class ProspectWorkflowEngine:
                 account_ids=account_ids,
             )
             output = contact_agent.run(payload, context=agent_context(current, "contact_enrichment_system.txt"))
+            
+            # Check for fallback and requeue if necessary
+            fallback_state = handle_fallback_state(output, current, "contact_enrichment")
+            if fallback_state is not None:
+                return fallback_state
             step = self._tools.add_workflow_step(
                 tenant_id=current.tenant_id,
                 workflow_run_id=current.workflow_run_id,
@@ -251,6 +293,11 @@ class ProspectWorkflowEngine:
                 account_ids=account_ids,
             )
             output = intent_agent.run(payload, context=agent_context(current, "intent_signal_system.txt"))
+            
+            # Check for fallback and requeue if necessary
+            fallback_state = handle_fallback_state(output, current, "intent_signal")
+            if fallback_state is not None:
+                return fallback_state
             step = self._tools.add_workflow_step(
                 tenant_id=current.tenant_id,
                 workflow_run_id=current.workflow_run_id,
@@ -322,6 +369,11 @@ class ProspectWorkflowEngine:
                 assessments=[item for item in current.intent_assessments],
             )
             output = hypothesis_agent.run(payload, context=agent_context(current, "value_hypothesis_system.txt"))
+            
+            # Check for fallback and requeue if necessary
+            fallback_state = handle_fallback_state(output, current, "value_hypothesis")
+            if fallback_state is not None:
+                return fallback_state
             step = self._tools.add_workflow_step(
                 tenant_id=current.tenant_id,
                 workflow_run_id=current.workflow_run_id,
@@ -446,6 +498,11 @@ class ProspectWorkflowEngine:
                 approval_status=current.approval_status or ApprovalStatus.pending,
             )
             output = outreach_agent.run(payload, context=agent_context(current, "outreach_system.txt"))
+            
+            # Check for fallback and requeue if necessary
+            fallback_state = handle_fallback_state(output, current, "outreach")
+            if fallback_state is not None:
+                return fallback_state
             step = self._tools.add_workflow_step(
                 tenant_id=current.tenant_id,
                 workflow_run_id=current.workflow_run_id,

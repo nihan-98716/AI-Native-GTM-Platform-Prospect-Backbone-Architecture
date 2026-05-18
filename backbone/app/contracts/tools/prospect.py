@@ -101,3 +101,16 @@ class WorkflowRunToolRecord(BaseModel):
     output: dict = Field(default_factory=dict)
     last_heartbeat_at: datetime | None = None
 
+
+class WorkflowRunSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: str
+    workflow_run_id: str
+    status: WorkflowStatus
+    workflow_type: str
+    created_at: datetime
+    updated_at: datetime
+    duration_ms: int
+    trace_id: str | None = None
+

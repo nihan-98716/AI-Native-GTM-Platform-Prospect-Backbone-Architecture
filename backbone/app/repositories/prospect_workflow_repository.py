@@ -13,6 +13,7 @@ from app.contracts.tools.prospect import (
     SignalToolRecord,
     ToolCallRecord,
     WorkflowRunToolRecord,
+    WorkflowRunSummary,
     WorkflowStepRecord,
 )
 from app.contracts.workflows.lifecycle import WorkflowStart
@@ -602,3 +603,152 @@ class SqlProspectWorkflowRepository:
             tenant_id=tenant_id,
         )
         return round(total_cost, 6), total_latency
+
+    def list_workflow_runs(self, *, tenant_id: str, limit: int = 50, offset: int = 0) -> list[WorkflowRunSummary]:
+        started = time.perf_counter()
+        rows = (
+            self._session.execute(
+                select(WorkflowRun)
+                .where(WorkflowRun.tenant_id == tenant_id)
+                .order_by(WorkflowRun.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+            .scalars()
+            .all()
+        )
+        self._emit(service="repositories.prospect.list_workflow_runs", status="ok", started=started, tenant_id=tenant_id)
+        results: list[WorkflowRunSummary] = []
+        for row in rows:
+            created_at = row.created_at
+            updated_at = row.updated_at
+            duration = 0
+            try:
+                if created_at and updated_at:
+                    duration = int((updated_at - created_at).total_seconds() * 1000)
+            except Exception:
+                duration = 0
+            trace_id = None
+            try:
+                out = row.output or {}
+                if isinstance(out, dict):
+                    trace_id = out.get("trace_id")
+                    traces = out.get("traces")
+                    if not trace_id and isinstance(traces, list) and traces:
+                        first = traces[0]
+                        if isinstance(first, dict):
+                            trace_id = first.get("trace_id")
+            except Exception:
+                trace_id = None
+            results.append(
+                WorkflowRunSummary(
+                    tenant_id=row.tenant_id,
+                    workflow_run_id=row.id,
+                    status=WorkflowStatus(row.status),
+                    workflow_type=row.workflow_type,
+                    created_at=created_at,
+                    updated_at=updated_at,
+                    duration_ms=duration,
+                    trace_id=trace_id,
+                )
+            )
+        return results
+
+    def get_workflow_run_summary(self, *, tenant_id: str, workflow_run_id: str) -> WorkflowRunSummary | None:
+        started = time.perf_counter()
+        row = self._session.execute(
+            select(WorkflowRun).where(WorkflowRun.tenant_id == tenant_id, WorkflowRun.id == workflow_run_id)
+        ).scalar_one_or_none()
+        self._emit(service="repositories.prospect.get_workflow_run_summary", status="ok", started=started, tenant_id=tenant_id)
+        if row is None:
+            return None
+        created_at = row.created_at
+        updated_at = row.updated_at
+        duration = 0
+        try:
+            if created_at and updated_at:
+                duration = int((updated_at - created_at).total_seconds() * 1000)
+        except Exception:
+            duration = 0
+        trace_id = None
+        try:
+            out = row.output or {}
+            if isinstance(out, dict):
+                trace_id = out.get("trace_id")
+                traces = out.get("traces")
+                if not trace_id and isinstance(traces, list) and traces:
+                    first = traces[0]
+                    if isinstance(first, dict):
+                        trace_id = first.get("trace_id")
+        except Exception:
+            trace_id = None
+        return WorkflowRunSummary(
+            tenant_id=row.tenant_id,
+            workflow_run_id=row.id,
+            status=WorkflowStatus(row.status),
+            workflow_type=row.workflow_type,
+            created_at=created_at,
+            updated_at=updated_at,
+            duration_ms=duration,
+            trace_id=trace_id,
+        )
+
+    def list_workflow_steps(self, *, tenant_id: str, workflow_run_id: str) -> list[WorkflowStepRecord]:
+        started = time.perf_counter()
+        rows = (
+            self._session.execute(
+                select(WorkflowStep)
+                .where(WorkflowStep.tenant_id == tenant_id, WorkflowStep.workflow_run_id == workflow_run_id)
+                .order_by(WorkflowStep.created_at.asc())
+            )
+            .scalars()
+            .all()
+        )
+        self._emit(service="repositories.prospect.list_workflow_steps", status="ok", started=started, tenant_id=tenant_id)
+        results: list[WorkflowStepRecord] = []
+        for row in rows:
+            results.append(
+                WorkflowStepRecord(
+                    tenant_id=row.tenant_id,
+                    workflow_run_id=row.workflow_run_id,
+                    workflow_step_id=row.id,
+                    step_name=row.step_name,
+                    status=JobStatus(row.status),
+                    trace_id=row.input.get("trace_id") if isinstance(row.input, dict) else None,
+                    correlation_id=row.input.get("correlation_id") if isinstance(row.input, dict) else None,
+                    input=row.input,
+                    output=row.output,
+                    error_message=row.error_message,
+                )
+            )
+        return results
+
+    def list_tool_calls(self, *, tenant_id: str, workflow_run_id: str) -> list[ToolCallRecord]:
+        started = time.perf_counter()
+        rows = (
+            self._session.execute(
+                select(ToolCall)
+                .where(ToolCall.tenant_id == tenant_id, ToolCall.workflow_run_id == workflow_run_id)
+                .order_by(ToolCall.created_at.asc())
+            )
+            .scalars()
+            .all()
+        )
+        self._emit(service="repositories.prospect.list_tool_calls", status="ok", started=started, tenant_id=tenant_id)
+        results: list[ToolCallRecord] = []
+        for row in rows:
+            results.append(
+                ToolCallRecord(
+                    tenant_id=row.tenant_id,
+                    workflow_run_id=row.workflow_run_id,
+                    tool_call_id=row.id,
+                    tool_name=row.tool_name,
+                    status=JobStatus(row.status),
+                    trace_id=row.input.get("trace_id") if isinstance(row.input, dict) else None,
+                    correlation_id=row.input.get("correlation_id") if isinstance(row.input, dict) else None,
+                    input=row.input,
+                    output=row.output,
+                    error_message=row.error_message,
+                )
+            )
+        return results

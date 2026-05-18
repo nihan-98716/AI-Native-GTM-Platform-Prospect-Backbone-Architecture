@@ -182,3 +182,37 @@ class ProspectWorkflowService:
             estimated_latency_ms=state.estimated_latency_ms,
         )
 
+    def list_workflows(self, context: TenantContext, limit: int = 50, offset: int = 0) -> list:
+        """Return workflow summaries for the tenant."""
+        runs = self._repository.list_workflow_runs(tenant_id=context.tenant_id, limit=limit, offset=offset)
+        # runs are WorkflowRunSummary pydantic objects from the repository
+        return runs
+
+    def get_workflow_detail(self, context: TenantContext, workflow_run_id: str) -> dict:
+        """Return detailed workflow data including timeline and tool calls."""
+        summary = self._repository.get_workflow_run_summary(tenant_id=context.tenant_id, workflow_run_id=workflow_run_id)
+        if summary is None:
+            raise LookupError("Workflow run not found.")
+        steps = self._repository.list_workflow_steps(tenant_id=context.tenant_id, workflow_run_id=workflow_run_id)
+        tool_calls = self._repository.list_tool_calls(tenant_id=context.tenant_id, workflow_run_id=workflow_run_id)
+        run = self._repository.get_workflow_run(tenant_id=context.tenant_id, workflow_run_id=workflow_run_id)
+        audit_refs: list[str] = []
+        if run and isinstance(run.output, dict):
+            evidence = run.output.get("evidence") or {}
+            if isinstance(evidence, dict):
+                audit_refs = evidence.get("approval_request_ids") or []
+        return {
+            "metadata": {
+                "workflow_run_id": summary.workflow_run_id,
+                "tenant_id": summary.tenant_id,
+                "workflow_type": summary.workflow_type,
+                "status": summary.status,
+                "created_at": summary.created_at,
+                "updated_at": summary.updated_at,
+                "duration": summary.duration_ms,
+                "trace_id": summary.trace_id,
+            },
+            "timeline": [s.model_dump(mode="json") if hasattr(s, "model_dump") else s for s in steps],
+            "tool_calls": [t.model_dump(mode="json") if hasattr(t, "model_dump") else t for t in tool_calls],
+            "audit_references": audit_refs,
+        }
