@@ -1,21 +1,3 @@
-"""
-Phase 7 Test Data Generator
-
-Creates realistic multi-tenant test data for end-to-end validation.
-
-Structure:
-- 3 test tenants with different profiles
-- Accounts, Contacts, Signals with realistic business context
-- Workflow runs at various states (completed, running, queued, failed, waiting_for_approval)
-- Integration connections (connected, failed, syncing)
-- Audit trail for all operations
-
-Constraints:
-- Uses "test-" prefixes for professional identification
-- Maintains tenant ownership and provenance
-- Includes trace_ids, correlation_ids, timestamps
-- No repetitive or placeholder content
-"""
 from __future__ import annotations
 
 import uuid
@@ -24,64 +6,44 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.contracts.common import (
-    ApprovalStatus,
-    IntegrationStatus,
-    JobStatus,
-    OutreachDraftStatus,
-    WorkflowStatus,
-)
-from app.models.gtm import Account, Contact, ICP, Signal
-from app.models.identity import User
+from app.contracts.common import ApprovalStatus, JobStatus, OutreachDraftStatus, WorkflowStatus
+from app.contracts.integrations import IntegrationAuthType, IntegrationConnectionStatus, IntegrationExecutionStatus
+from app.models.artifacts import OutreachDraft, ValueHypothesis
+from app.models.gtm import Account, Contact, Signal
+from app.models.identity import AuditEvent, User
 from app.models.integrations import IntegrationConnection, IntegrationRun
-from app.models.prospect import (
-    Hypothesis,
-    OutreachDraft,
-    WorkflowRun,
-    WorkflowStep,
-    ApprovalCheckpoint,
-)
+from app.models.prospect import ICPDefinition
 from app.models.tenant import Tenant
+from app.models.workflows import ApprovalRequest, WorkflowRun, WorkflowStep
 
 
 class TestDataGenerator:
-    """Generates realistic test data for Phase 7 validation."""
+    """Generate realistic multi-tenant test data aligned to current models."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
         self.base_time = datetime.now(tz=UTC)
 
+    def _trace_pair(self, prefix: str) -> tuple[str, str]:
+        return (f"trace-{prefix}-{uuid.uuid4().hex[:10]}", f"corr-{prefix}-{uuid.uuid4().hex[:10]}")
+
     def create_test_tenants(self) -> list[Tenant]:
-        """Create 3 test tenants representing different company profiles."""
         tenants = [
-            Tenant(
-                name="Test Tenant: Enterprise SaaS",
-                slug="test-enterprise-saas",
-                status="active",
-            ),
-            Tenant(
-                name="Test Tenant: Mid-Market Tech",
-                slug="test-midmarket-tech",
-                status="active",
-            ),
-            Tenant(
-                name="Test Tenant: Growth Stage",
-                slug="test-growth-stage",
-                status="active",
-            ),
+            Tenant(name="Test Tenant: Enterprise SaaS", slug="test-enterprise-saas"),
+            Tenant(name="Test Tenant: Mid-Market Technology", slug="test-midmarket-technology"),
+            Tenant(name="Test Tenant: Growth Stage Platform", slug="test-growth-stage-platform"),
         ]
         self.session.add_all(tenants)
         self.session.flush()
         return tenants
 
     def create_test_users(self, tenants: list[Tenant]) -> dict[str, User]:
-        """Create test users per tenant."""
-        users = {}
+        users: dict[str, User] = {}
         for tenant in tenants:
             user = User(
                 tenant_id=tenant.id,
                 email=f"test-seller@{tenant.slug}.test",
-                full_name=f"Test Sales Rep - {tenant.name}",
+                full_name=f"Test Seller ({tenant.slug})",
                 status="active",
                 roles=["seller"],
                 permissions={"prospect:read": True, "prospect:write": True},
@@ -91,414 +53,371 @@ class TestDataGenerator:
         self.session.flush()
         return users
 
-    def create_test_accounts(self, tenant: Tenant, count: int = 20) -> list[Account]:
-        """Create realistic test accounts for a tenant."""
-        accounts = []
+    def create_test_accounts(self, tenant: Tenant, *, count: int = 25) -> list[Account]:
         industries = ["Software", "SaaS", "Financial Services", "Healthcare", "Retail"]
-        company_types = [
-            "Public",
-            "Private",
-            "Series D",
-            "Series C",
-            "Series B",
-        ]
-
-        for i in range(count):
-            industry = industries[i % len(industries)]
-            company_type = company_types[i % len(company_types)]
-
+        stages = ["prospect", "qualified", "engaged", "proposal", "customer"]
+        accounts: list[Account] = []
+        for idx in range(count):
+            industry = industries[idx % len(industries)]
+            created_at = self.base_time - timedelta(days=120 - idx)
             account = Account(
                 tenant_id=tenant.id,
-                name=f"Test Corp {i}: {industry} Ltd",
-                domain=f"test-corp-{i:03d}.test",
-                status="active",
-                custom_fields={
+                name=f"Test Account {idx + 1} - {industry}",
+                domain=f"test-account-{idx + 1:03d}.{tenant.slug}.test",
+                lifecycle_stage=stages[idx % len(stages)],
+                firmographics={
                     "industry": industry,
-                    "company_type": company_type,
-                    "employee_count": 100 + (i * 50),
-                    "annual_revenue": f"${(5 + i) * 10}M",
-                    "ipo_date": None,
+                    "employee_count": 75 + idx * 18,
+                    "annual_revenue_usd": 4_000_000 + idx * 420_000,
+                    "hq_region": "EU" if idx % 2 == 0 else "US",
                 },
+                custom_fields={"priority_tier": "A" if idx < 5 else "B", "segment": "enterprise" if idx % 3 == 0 else "mid-market"},
+                source_type="seeded",
+                source_provider="phase7_seed_generator",
+                source_record_id=f"{tenant.slug}-acct-{idx + 1:03d}",
+                ingestion_timestamp=created_at,
+                created_at=created_at,
+                updated_at=created_at + timedelta(hours=4),
             )
             self.session.add(account)
             accounts.append(account)
-
         self.session.flush()
         return accounts
 
-    def create_test_contacts(
-        self, tenant: Tenant, accounts: list[Account], contacts_per_account: int = 3
-    ) -> list[Contact]:
-        """Create realistic test contacts for accounts."""
-        contacts = []
+    def create_test_contacts(self, tenant: Tenant, accounts: list[Account], *, contacts_per_account: int = 3) -> list[Contact]:
         titles = [
-            "VP of Sales",
-            "Sales Director",
-            "Enterprise Account Executive",
+            "VP Sales",
+            "Director of Revenue Operations",
             "Chief Revenue Officer",
-            "Sales Manager",
+            "Account Executive",
+            "Head of Partnerships",
         ]
-
-        for account_idx, account in enumerate(accounts[:15]):
+        contacts: list[Contact] = []
+        for account_idx, account in enumerate(accounts[:20]):
             for contact_idx in range(contacts_per_account):
-                title = titles[
-                    (account_idx * contacts_per_account + contact_idx) % len(titles)
-                ]
+                created_at = self.base_time - timedelta(days=90 - account_idx, hours=contact_idx * 3)
                 contact = Contact(
                     tenant_id=tenant.id,
                     account_id=account.id,
-                    first_name=f"Test-{account_idx:02d}-Contact-{contact_idx}",
-                    last_name=f"Professional",
-                    title=title,
-                    email=f"test-contact-{account_idx:02d}-{contact_idx}@{account.domain}",
-                    phone=f"+1-555-{1000 + account_idx}-{contact_idx:04d}",
-                    status="active",
+                    full_name=f"Test Contact {account_idx + 1}-{contact_idx + 1}",
+                    email=f"test-contact-{account_idx + 1:02d}-{contact_idx + 1}@{account.domain}",
+                    title=titles[(account_idx + contact_idx) % len(titles)],
                     custom_fields={
-                        "seniority_level": "executive" if contact_idx == 0 else "director",
-                        "linkedin_profile": f"https://linkedin.test/in/test-contact-{account_idx:02d}-{contact_idx}",
-                        "engagement_score": 65 + (contact_idx * 10),
+                        "seniority": "executive" if contact_idx == 0 else "manager",
+                        "engagement_score": 62 + contact_idx * 12 + (account_idx % 7),
                     },
+                    source_type="seeded",
+                    source_provider="phase7_seed_generator",
+                    source_record_id=f"{tenant.slug}-contact-{account_idx + 1:02d}-{contact_idx + 1}",
+                    ingestion_timestamp=created_at,
+                    created_at=created_at,
+                    updated_at=created_at + timedelta(hours=2),
                 )
                 self.session.add(contact)
                 contacts.append(contact)
-
         self.session.flush()
         return contacts
 
-    def create_test_icp(self, tenant: Tenant) -> ICP:
-        """Create a test ICP definition."""
-        icp = ICP(
+    def create_test_signals(self, tenant: Tenant, accounts: list[Account], *, signals_per_account: int = 2) -> list[Signal]:
+        signal_types = ["job_change", "funding_news", "product_launch", "keyword_spike", "web_traffic_spike"]
+        sources = ["linkedin", "news", "rss", "web", "intent-api"]
+        signals: list[Signal] = []
+        for account_idx, account in enumerate(accounts[:20]):
+            for signal_idx in range(signals_per_account):
+                observed_at = self.base_time - timedelta(days=(account_idx % 25), hours=signal_idx * 5)
+                signal_type = signal_types[(account_idx + signal_idx) % len(signal_types)]
+                source = sources[(account_idx + signal_idx) % len(sources)]
+                signal = Signal(
+                    tenant_id=tenant.id,
+                    account_id=account.id,
+                    source=source,
+                    signal_type=signal_type,
+                    strength=55 + (signal_idx * 15) + (account_idx % 20),
+                    payload={
+                        "headline": f"Test Signal: {signal_type} observed for {account.name}",
+                        "url": f"https://signals.{source}.test/{uuid.uuid4().hex[:12]}",
+                        "confidence": round(0.71 + signal_idx * 0.09, 2),
+                    },
+                    observed_at=observed_at,
+                    source_type="seeded",
+                    source_provider="phase7_seed_generator",
+                    source_record_id=f"{tenant.slug}-signal-{account_idx + 1:02d}-{signal_idx + 1}",
+                    ingestion_timestamp=observed_at,
+                    created_at=observed_at,
+                    updated_at=observed_at + timedelta(minutes=30),
+                )
+                self.session.add(signal)
+                signals.append(signal)
+        self.session.flush()
+        return signals
+
+    def create_test_icp(self, tenant: Tenant) -> ICPDefinition:
+        icp = ICPDefinition(
             tenant_id=tenant.id,
-            name="Test ICP: Enterprise SaaS Target",
-            description="Enterprise software companies with 100+ employees targeting European expansion",
-            criteria={
-                "industry": ["Software", "SaaS", "Financial Services"],
-                "min_employees": 100,
-                "company_types": ["Public", "Series C+"],
-                "geographies": ["EU", "US"],
-                "revenue_range": "$10M-$500M",
-            },
+            name="Test ICP: High-Intent Enterprise Expansion",
+            description="Enterprise and upper mid-market companies showing expansion intent in EU or US.",
             status="active",
+            criteria={
+                "industries": ["Software", "SaaS", "Financial Services"],
+                "min_employee_count": 100,
+                "revenue_floor_usd": 10_000_000,
+                "regions": ["EU", "US"],
+            },
+            target_personas={
+                "primary": ["Chief Revenue Officer", "VP Sales"],
+                "secondary": ["Director Revenue Operations", "Head of Partnerships"],
+            },
+            created_at=self.base_time - timedelta(days=150),
+            updated_at=self.base_time - timedelta(days=30),
         )
         self.session.add(icp)
         self.session.flush()
         return icp
 
-    def create_test_signals(
-        self, tenant: Tenant, accounts: list[Account], signals_per_account: int = 2
-    ) -> list[Signal]:
-        """Create realistic intent signals for accounts."""
-        signals = []
-        signal_types = [
-            "job_change",
-            "funding_news",
-            "product_launch",
-            "web_traffic_spike",
-            "keyword_search",
+    def create_test_workflow_runs(self, tenant: Tenant, icp: ICPDefinition, accounts: list[Account]) -> list[WorkflowRun]:
+        statuses = [
+            WorkflowStatus.succeeded.value,
+            WorkflowStatus.running.value,
+            WorkflowStatus.queued.value,
+            WorkflowStatus.waiting_for_approval.value,
+            WorkflowStatus.failed.value,
         ]
-        sources = ["linkedin", "news", "web", "rss", "api"]
+        runs: list[WorkflowRun] = []
+        for idx, status in enumerate(statuses):
+            trace_id, correlation_id = self._trace_pair(f"workflow-{tenant.slug}-{idx + 1}")
+            created_at = self.base_time - timedelta(days=idx + 1, hours=idx)
+            output_payload: dict[str, Any] = {
+                "trace_id": trace_id,
+                "correlation_id": correlation_id,
+                "summary": f"Test workflow {idx + 1} for {tenant.slug}",
+                "state": status,
+            }
+            if status == WorkflowStatus.failed.value:
+                output_payload["error"] = "Transient integration failure while enriching contacts."
+            if status == WorkflowStatus.waiting_for_approval.value:
+                output_payload["approval_gate"] = {"reason": "Human review required before external outreach."}
 
-        for account_idx, account in enumerate(accounts[:15]):
-            for signal_idx in range(signals_per_account):
-                signal_type = signal_types[
-                    (account_idx * signals_per_account + signal_idx) % len(signal_types)
-                ]
-                source = sources[
-                    (account_idx * signals_per_account + signal_idx) % len(sources)
-                ]
-
-                signal = Signal(
-                    tenant_id=tenant.id,
-                    account_id=account.id,
-                    signal_type=signal_type,
-                    source=source,
-                    strength=50 + (signal_idx * 20),
-                    timestamp=self.base_time - timedelta(days=30 + signal_idx),
-                    custom_fields={
-                        "headline": f"Test Signal: {signal_type} detected on {account.name}",
-                        "url": f"https://{source}.test/signals/{uuid.uuid4().hex[:8]}",
-                        "confidence_score": 0.75 + (signal_idx * 0.1),
-                    },
-                )
-                self.session.add(signal)
-                signals.append(signal)
-
-        self.session.flush()
-        return signals
-
-    def create_test_workflow_runs(
-        self, tenant: Tenant, icp: ICP, accounts: list[Account]
-    ) -> list[WorkflowRun]:
-        """Create workflow runs in various states."""
-        runs = []
-
-        # Completed workflow
-        run_completed = WorkflowRun(
-            tenant_id=tenant.id,
-            icp_id=icp.id,
-            account_id=accounts[0].id,
-            status=WorkflowStatus.succeeded,
-            workflow_type="prospect_research",
-            created_at=self.base_time - timedelta(days=5),
-            started_at=self.base_time - timedelta(days=5),
-            completed_at=self.base_time - timedelta(days=4, hours=2),
-            estimated_cost_usd=0.45,
-            estimated_latency_ms=12500,
-            output={
-                "ranked_accounts": [{"account_id": accounts[0].id, "rank_score": 92}]
-            },
-        )
-        self.session.add(run_completed)
-        runs.append(run_completed)
-
-        # Running workflow
-        run_running = WorkflowRun(
-            tenant_id=tenant.id,
-            icp_id=icp.id,
-            account_id=accounts[1].id,
-            status=WorkflowStatus.running,
-            workflow_type="prospect_research",
-            created_at=self.base_time - timedelta(hours=2),
-            started_at=self.base_time - timedelta(hours=1, minutes=45),
-            estimated_cost_usd=0.15,
-            estimated_latency_ms=3200,
-        )
-        self.session.add(run_running)
-        runs.append(run_running)
-
-        # Queued for retry
-        run_queued = WorkflowRun(
-            tenant_id=tenant.id,
-            icp_id=icp.id,
-            account_id=accounts[2].id,
-            status=WorkflowStatus.queued,
-            workflow_type="prospect_research",
-            created_at=self.base_time - timedelta(minutes=30),
-            estimated_cost_usd=0.0,
-            estimated_latency_ms=0,
-        )
-        self.session.add(run_queued)
-        runs.append(run_queued)
-
-        # Waiting for approval
-        run_approval = WorkflowRun(
-            tenant_id=tenant.id,
-            icp_id=icp.id,
-            account_id=accounts[3].id,
-            status=WorkflowStatus.waiting_for_approval,
-            workflow_type="prospect_research",
-            approval_status=ApprovalStatus.pending,
-            created_at=self.base_time - timedelta(days=1),
-            started_at=self.base_time - timedelta(days=1),
-            estimated_cost_usd=0.42,
-            estimated_latency_ms=11800,
-            output={
-                "hypotheses": [
-                    {
-                        "account_id": accounts[3].id,
-                        "title": "Test Hypothesis: Expansion Opportunity",
-                        "confidence_score": 0.87,
-                    }
-                ]
-            },
-        )
-        self.session.add(run_approval)
-        runs.append(run_approval)
-
-        # Failed workflow
-        run_failed = WorkflowRun(
-            tenant_id=tenant.id,
-            icp_id=icp.id,
-            account_id=accounts[4].id,
-            status=WorkflowStatus.failed,
-            workflow_type="prospect_research",
-            created_at=self.base_time - timedelta(days=2),
-            started_at=self.base_time - timedelta(days=2),
-            completed_at=self.base_time - timedelta(days=2, hours=1),
-            estimated_cost_usd=0.12,
-            estimated_latency_ms=4100,
-            output={"error": "Integration connection failed during contact enrichment"},
-        )
-        self.session.add(run_failed)
-        runs.append(run_failed)
-
+            run = WorkflowRun(
+                tenant_id=tenant.id,
+                workflow_type="prospect_research",
+                status=status,
+                icp_id=icp.id,
+                account_id=accounts[idx].id,
+                idempotency_key=f"phase7-{tenant.slug}-run-{idx + 1}",
+                input={
+                    "icp_id": icp.id,
+                    "account_id": accounts[idx].id,
+                    "trace_id": trace_id,
+                    "correlation_id": correlation_id,
+                    "requested_by": f"test-seller@{tenant.slug}.test",
+                },
+                output=output_payload,
+                last_heartbeat_at=self.base_time - timedelta(minutes=idx * 3),
+                created_at=created_at,
+                updated_at=created_at + timedelta(minutes=8),
+            )
+            self.session.add(run)
+            runs.append(run)
         self.session.flush()
         return runs
 
-    def create_test_workflow_steps(
-        self, run: WorkflowRun
-    ) -> list[WorkflowStep]:
-        """Create workflow steps for a completed run."""
-        if run.status != WorkflowStatus.succeeded:
-            return []
+    def create_test_workflow_steps(self, run: WorkflowRun) -> list[WorkflowStep]:
+        trace_id = str(run.output.get("trace_id", "trace-unavailable"))
+        correlation_id = str(run.output.get("correlation_id", "corr-unavailable"))
 
-        steps = [
-            WorkflowStep(
+        step_templates: list[tuple[str, str]] = [("research", JobStatus.completed.value), ("contact_enrichment", JobStatus.completed.value)]
+        if run.status == WorkflowStatus.running.value:
+            step_templates = [("research", JobStatus.completed.value), ("contact_enrichment", JobStatus.running.value)]
+        elif run.status == WorkflowStatus.queued.value:
+            step_templates = [("research", JobStatus.pending.value)]
+        elif run.status == WorkflowStatus.waiting_for_approval.value:
+            step_templates = [("research", JobStatus.completed.value), ("hypothesis_generation", JobStatus.completed.value)]
+        elif run.status == WorkflowStatus.failed.value:
+            step_templates = [("research", JobStatus.completed.value), ("contact_enrichment", JobStatus.failed.value)]
+
+        steps: list[WorkflowStep] = []
+        for idx, (step_name, step_status) in enumerate(step_templates):
+            step = WorkflowStep(
                 tenant_id=run.tenant_id,
                 workflow_run_id=run.id,
-                step_name="research",
-                status=JobStatus.completed,
-                trace_id=f"trace-research-{uuid.uuid4().hex[:8]}",
-                correlation_id=f"corr-{uuid.uuid4().hex[:8]}",
-                input_payload={"icp_id": str(run.icp_id)},
-                output_payload={"ranked_accounts": [{"account_id": str(run.account_id), "rank_score": 92}]},
-                created_at=run.started_at,
-                completed_at=run.started_at + timedelta(seconds=5),
-            ),
-            WorkflowStep(
-                tenant_id=run.tenant_id,
-                workflow_run_id=run.id,
-                step_name="contact_enrichment",
-                status=JobStatus.completed,
-                trace_id=f"trace-contact-{uuid.uuid4().hex[:8]}",
-                correlation_id=f"corr-{uuid.uuid4().hex[:8]}",
-                input_payload={"account_ids": [str(run.account_id)]},
-                output_payload={"enriched_contacts": [{"contact_id": "test-contact-1", "completeness_score": 95}]},
-                created_at=run.started_at + timedelta(seconds=5),
-                completed_at=run.started_at + timedelta(seconds=15),
-            ),
-        ]
-        self.session.add_all(steps)
+                step_name=step_name,
+                status=step_status,
+                input={"trace_id": trace_id, "correlation_id": correlation_id, "step_index": idx},
+                output={
+                    "trace_id": trace_id,
+                    "correlation_id": correlation_id,
+                    "status": step_status,
+                    "decision_summary": f"{step_name} completed for workflow {run.id}",
+                },
+                error_message="LLM timeout while contacting provider." if step_status == JobStatus.failed.value else None,
+                created_at=run.created_at + timedelta(minutes=idx),
+                updated_at=run.created_at + timedelta(minutes=idx + 1),
+            )
+            self.session.add(step)
+            steps.append(step)
         self.session.flush()
         return steps
 
-    def create_test_hypotheses(
-        self, tenant: Tenant, run: WorkflowRun
-    ) -> list[Hypothesis]:
-        """Create test hypotheses for a workflow run."""
-        if not run.account_id:
+    def create_test_hypotheses(self, run: WorkflowRun) -> list[ValueHypothesis]:
+        if run.status not in (WorkflowStatus.succeeded.value, WorkflowStatus.waiting_for_approval.value):
             return []
-
-        hypotheses = [
-            Hypothesis(
-                tenant_id=tenant.id,
-                workflow_run_id=run.id,
-                account_id=run.account_id,
-                contact_id=None,
-                title=f"Test Hypothesis: Expansion Opportunity at {run.account_id}",
-                hypothesis="This account shows strong buying signals for enterprise expansion in the EU market.",
-                supporting_evidence=["job_change:CEO", "funding_news:Series D", "web_traffic_spike"],
-                confidence_score=0.87,
-                generated_by_agent="ValueHypothesisAgent",
-            ),
-        ]
-        self.session.add_all(hypotheses)
-        self.session.flush()
-        return hypotheses
-
-    def create_test_outreach_drafts(
-        self, tenant: Tenant, run: WorkflowRun
-    ) -> list[OutreachDraft]:
-        """Create test outreach drafts for a workflow run."""
-        if run.status != WorkflowStatus.succeeded:
-            return []
-
-        drafts = [
-            OutreachDraft(
-                tenant_id=tenant.id,
-                workflow_run_id=run.id,
-                account_id=run.account_id,
-                contact_id=None,
-                subject="Test Outreach: European Expansion Opportunity",
-                body="We've identified a significant opportunity for your organization based on recent market signals and your expansion strategy...",
-                status=OutreachDraftStatus.draft,
-                generated_by_agent="OutreachAgent",
-                confidence_score=0.85,
-            ),
-        ]
-        self.session.add_all(drafts)
-        self.session.flush()
-        return drafts
-
-    def create_test_approval_checkpoints(
-        self, tenant: Tenant, run: WorkflowRun
-    ) -> list[ApprovalCheckpoint]:
-        """Create approval checkpoints for runs waiting approval."""
-        if run.status != WorkflowStatus.waiting_for_approval:
-            return []
-
-        checkpoint = ApprovalCheckpoint(
-            tenant_id=tenant.id,
+        hypothesis = ValueHypothesis(
+            tenant_id=run.tenant_id,
             workflow_run_id=run.id,
-            approval_request_id=str(uuid.uuid4()),
-            reason="Human review required: Evaluate hypotheses before outreach to this account",
-            status=ApprovalStatus.pending,
-            created_at=self.base_time - timedelta(hours=4),
-            expires_at=self.base_time + timedelta(days=7),
+            account_id=run.account_id,
+            contact_id=None,
+            generated_by_agent="value_hypothesis_agent",
+            generated_at=self.base_time - timedelta(hours=6),
+            confidence_score=84,
+            title="Test Hypothesis: Expansion readiness for enterprise segment",
+            hypothesis="Signals indicate readiness to adopt expanded outbound motion in priority regions.",
+            metadata_={"trace_id": run.output.get("trace_id"), "correlation_id": run.output.get("correlation_id"), "evidence_count": 3},
+            created_at=self.base_time - timedelta(hours=6),
+            updated_at=self.base_time - timedelta(hours=5, minutes=30),
         )
-        self.session.add(checkpoint)
+        self.session.add(hypothesis)
         self.session.flush()
-        return [checkpoint]
+        return [hypothesis]
 
-    def create_test_integration_connections(
-        self, tenant: Tenant
-    ) -> list[IntegrationConnection]:
-        """Create test integration connections in various states."""
-        connections = [
-            IntegrationConnection(
-                tenant_id=tenant.id,
-                provider_name="apollo",
-                status=IntegrationStatus.live,
-                auth_type="api_key",
-                config={
-                    "api_key_encrypted": "test-encrypted-key-1",
-                    "workspace_id": "test-workspace-123",
-                },
-                health_check_at=self.base_time - timedelta(minutes=5),
-                health_status="healthy",
-                last_sync_at=self.base_time - timedelta(minutes=15),
-                sync_status="idle",
-            ),
-            IntegrationConnection(
-                tenant_id=tenant.id,
-                provider_name="hubspot",
-                status=IntegrationStatus.failed,
-                auth_type="oauth",
-                config={"oauth_token_encrypted": "test-encrypted-token"},
-                health_check_at=self.base_time - timedelta(hours=2),
-                health_status="unhealthy",
-                health_error="Authentication token expired",
-                last_sync_at=self.base_time - timedelta(days=3),
-                sync_status="failed",
-            ),
-        ]
-        self.session.add_all(connections)
-        self.session.flush()
-        return connections
-
-    def create_test_integration_runs(
-        self, tenant: Tenant, connection: IntegrationConnection, account_count: int = 5
-    ) -> list[IntegrationRun]:
-        """Create test integration runs."""
-        if connection.status != IntegrationStatus.live:
+    def create_test_outreach_drafts(self, run: WorkflowRun) -> list[OutreachDraft]:
+        if run.status not in (WorkflowStatus.succeeded.value, WorkflowStatus.waiting_for_approval.value):
             return []
-
-        runs = [
-            IntegrationRun(
-                tenant_id=tenant.id,
-                integration_connection_id=connection.id,
-                provider_name=connection.provider_name,
-                status=JobStatus.completed,
-                sync_type="accounts_list",
-                records_fetched=account_count,
-                records_normalized=account_count,
-                records_written=account_count - 1,
-                error_count=0,
-                started_at=self.base_time - timedelta(minutes=30),
-                completed_at=self.base_time - timedelta(minutes=25),
-                metadata={
-                    "request_id": str(uuid.uuid4()),
-                    "trace_id": f"trace-sync-{uuid.uuid4().hex[:8]}",
-                },
-            ),
-        ]
-        self.session.add_all(runs)
+        status = OutreachDraftStatus.pending_approval.value if run.status == WorkflowStatus.waiting_for_approval.value else OutreachDraftStatus.draft.value
+        draft = OutreachDraft(
+            tenant_id=run.tenant_id,
+            workflow_run_id=run.id,
+            account_id=run.account_id,
+            contact_id=None,
+            generated_by_agent="outreach_agent",
+            generated_at=self.base_time - timedelta(hours=4),
+            confidence_score=82,
+            subject="Test Outreach: Revenue expansion priorities for this quarter",
+            body="Your current hiring and product momentum suggest a strong fit for a focused expansion initiative.",
+            status=status,
+            metadata_={"trace_id": run.output.get("trace_id"), "correlation_id": run.output.get("correlation_id"), "channel": "email"},
+            created_at=self.base_time - timedelta(hours=4),
+            updated_at=self.base_time - timedelta(hours=3, minutes=45),
+        )
+        self.session.add(draft)
         self.session.flush()
-        return runs
+        return [draft]
+
+    def create_test_approval_requests(self, run: WorkflowRun, reviewer_user_id: str | None) -> list[ApprovalRequest]:
+        if run.status != WorkflowStatus.waiting_for_approval.value:
+            return []
+        approval = ApprovalRequest(
+            tenant_id=run.tenant_id,
+            workflow_run_id=run.id,
+            workflow_step_id=None,
+            status=ApprovalStatus.pending.value,
+            reviewer_user_id=reviewer_user_id,
+            reviewed_at=None,
+            reason="Human approval required before sending outreach to this account.",
+            decision_payload={
+                "trace_id": run.output.get("trace_id"),
+                "correlation_id": run.output.get("correlation_id"),
+                "risk_level": "medium",
+                "requested_at": (self.base_time - timedelta(hours=2)).isoformat(),
+            },
+            created_at=self.base_time - timedelta(hours=2),
+            updated_at=self.base_time - timedelta(hours=2),
+        )
+        self.session.add(approval)
+        self.session.flush()
+        return [approval]
+
+    def create_test_integration_connections(self, tenant: Tenant) -> list[IntegrationConnection]:
+        live_connection = IntegrationConnection(
+            tenant_id=tenant.id,
+            provider="apollo",
+            connection_name="default",
+            is_default=True,
+            auth_type=IntegrationAuthType.api_key.value,
+            status=IntegrationConnectionStatus.live.value,
+            scopes=["accounts.read", "contacts.read"],
+            encrypted_credentials=b"phase7-seeded-encrypted-key",
+            expires_at=None,
+            health={"status": "healthy", "last_check_at": (self.base_time - timedelta(minutes=10)).isoformat()},
+            created_at=self.base_time - timedelta(days=15),
+            updated_at=self.base_time - timedelta(minutes=10),
+        )
+        failed_connection = IntegrationConnection(
+            tenant_id=tenant.id,
+            provider="hubspot",
+            connection_name="secondary",
+            is_default=False,
+            auth_type=IntegrationAuthType.oauth2.value,
+            status=IntegrationConnectionStatus.failed.value,
+            scopes=["crm.objects.contacts.read"],
+            encrypted_credentials=b"phase7-seeded-oauth-token",
+            expires_at=self.base_time - timedelta(days=2),
+            health={"status": "unhealthy", "error": "OAuth token expired", "last_check_at": (self.base_time - timedelta(hours=3)).isoformat()},
+            created_at=self.base_time - timedelta(days=12),
+            updated_at=self.base_time - timedelta(hours=3),
+        )
+        self.session.add_all([live_connection, failed_connection])
+        self.session.flush()
+        return [live_connection, failed_connection]
+
+    def create_test_integration_runs(self, connection: IntegrationConnection) -> list[IntegrationRun]:
+        trace_id, correlation_id = self._trace_pair(f"integration-{connection.provider}")
+        status = IntegrationExecutionStatus.completed.value if connection.status == IntegrationConnectionStatus.live.value else IntegrationExecutionStatus.failed.value
+        error_message = None if status == IntegrationExecutionStatus.completed.value else "Authentication expired during provider call."
+        started_at = self.base_time - timedelta(minutes=35)
+        finished_at = self.base_time - timedelta(minutes=31)
+
+        run = IntegrationRun(
+            tenant_id=connection.tenant_id,
+            connection_id=connection.id,
+            provider=connection.provider,
+            status=status,
+            request_metadata={
+                "operation": "sync",
+                "trace_id": trace_id,
+                "correlation_id": correlation_id,
+                "source_type": "accounts",
+            },
+            error_message=error_message,
+            counts={
+                "counts": {"records_fetched": 18, "records_normalized": 18, "records_written": 17, "error_count": 0 if error_message is None else 1},
+                "response_metadata": {"provider_request_id": uuid.uuid4().hex[:14]},
+                "timing": {
+                    "started_at": started_at.isoformat(),
+                    "finished_at": finished_at.isoformat(),
+                    "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
+                },
+            },
+            created_at=started_at,
+            updated_at=finished_at,
+        )
+        self.session.add(run)
+        self.session.flush()
+        return [run]
+
+    def create_test_audit_events(self, tenant_id: str, actor_user_id: str, workflow_runs: list[WorkflowRun]) -> list[AuditEvent]:
+        events: list[AuditEvent] = []
+        for run in workflow_runs:
+            event = AuditEvent(
+                tenant_id=tenant_id,
+                actor_user_id=actor_user_id,
+                action="workflow_seeded",
+                resource_type="workflow_run",
+                resource_id=run.id,
+                metadata_={
+                    "status": run.status,
+                    "trace_id": run.output.get("trace_id"),
+                    "correlation_id": run.output.get("correlation_id"),
+                    "workflow_type": run.workflow_type,
+                },
+                created_at=run.created_at + timedelta(minutes=1),
+            )
+            self.session.add(event)
+            events.append(event)
+        self.session.flush()
+        return events
 
     def generate_all(self) -> dict[str, Any]:
-        """Generate complete test data suite."""
-        results = {
+        results: dict[str, Any] = {
             "tenants": [],
             "users": {},
             "accounts": {},
@@ -509,71 +428,58 @@ class TestDataGenerator:
             "workflow_steps": {},
             "hypotheses": {},
             "outreach_drafts": {},
-            "approval_checkpoints": {},
+            "approval_requests": {},
             "integration_connections": {},
             "integration_runs": {},
+            "audit_events": {},
         }
 
-        # Create tenants and users
         tenants = self.create_test_tenants()
-        results["tenants"] = tenants
         users = self.create_test_users(tenants)
+        results["tenants"] = tenants
         results["users"] = users
 
-        # Create GTM entities per tenant
         for tenant in tenants:
             accounts = self.create_test_accounts(tenant, count=25)
-            results["accounts"][tenant.id] = accounts
-
-            contacts = self.create_test_contacts(tenant, accounts)
-            results["contacts"][tenant.id] = contacts
-
+            contacts = self.create_test_contacts(tenant, accounts, contacts_per_account=3)
+            signals = self.create_test_signals(tenant, accounts, signals_per_account=2)
             icp = self.create_test_icp(tenant)
-            results["icps"][tenant.id] = icp
+            workflow_runs = self.create_test_workflow_runs(tenant, icp, accounts)
+            integration_connections = self.create_test_integration_connections(tenant)
 
-            signals = self.create_test_signals(tenant, accounts)
+            workflow_steps: list[WorkflowStep] = []
+            hypotheses: list[ValueHypothesis] = []
+            outreach_drafts: list[OutreachDraft] = []
+            approval_requests: list[ApprovalRequest] = []
+            for run in workflow_runs:
+                workflow_steps.extend(self.create_test_workflow_steps(run))
+                hypotheses.extend(self.create_test_hypotheses(run))
+                outreach_drafts.extend(self.create_test_outreach_drafts(run))
+                approval_requests.extend(self.create_test_approval_requests(run, users[tenant.id].id))
+
+            integration_runs: list[IntegrationRun] = []
+            for connection in integration_connections:
+                integration_runs.extend(self.create_test_integration_runs(connection))
+
+            audit_events = self.create_test_audit_events(tenant.id, users[tenant.id].id, workflow_runs)
+
+            results["accounts"][tenant.id] = accounts
+            results["contacts"][tenant.id] = contacts
             results["signals"][tenant.id] = signals
-
-            # Create workflow runs
-            runs = self.create_test_workflow_runs(tenant, icp, accounts)
-            results["workflow_runs"][tenant.id] = runs
-
-            # Create supporting data for runs
-            for run in runs:
-                steps = self.create_test_workflow_steps(run)
-                if steps:
-                    results["workflow_steps"].setdefault(tenant.id, []).extend(steps)
-
-                hypotheses = self.create_test_hypotheses(tenant, run)
-                if hypotheses:
-                    results["hypotheses"].setdefault(tenant.id, []).extend(hypotheses)
-
-                drafts = self.create_test_outreach_drafts(tenant, run)
-                if drafts:
-                    results["outreach_drafts"].setdefault(tenant.id, []).extend(drafts)
-
-                checkpoints = self.create_test_approval_checkpoints(tenant, run)
-                if checkpoints:
-                    results["approval_checkpoints"].setdefault(tenant.id, []).extend(
-                        checkpoints
-                    )
-
-            # Create integration connections and runs
-            connections = self.create_test_integration_connections(tenant)
-            results["integration_connections"][tenant.id] = connections
-
-            for connection in connections:
-                runs = self.create_test_integration_runs(
-                    tenant, connection, len(accounts)
-                )
-                if runs:
-                    results["integration_runs"].setdefault(tenant.id, []).extend(runs)
+            results["icps"][tenant.id] = icp
+            results["workflow_runs"][tenant.id] = workflow_runs
+            results["workflow_steps"][tenant.id] = workflow_steps
+            results["hypotheses"][tenant.id] = hypotheses
+            results["outreach_drafts"][tenant.id] = outreach_drafts
+            results["approval_requests"][tenant.id] = approval_requests
+            results["integration_connections"][tenant.id] = integration_connections
+            results["integration_runs"][tenant.id] = integration_runs
+            results["audit_events"][tenant.id] = audit_events
 
         self.session.commit()
         return results
 
 
 def generate_test_data(session: Session) -> dict[str, Any]:
-    """Generate complete Phase 7 test data."""
     generator = TestDataGenerator(session)
     return generator.generate_all()

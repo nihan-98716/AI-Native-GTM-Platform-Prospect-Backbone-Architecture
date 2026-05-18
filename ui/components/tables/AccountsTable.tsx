@@ -50,9 +50,9 @@ export default function AccountsTable() {
         <table className="min-w-full table-auto"> 
           <thead>
             <tr className="text-left text-sm text-gray-500">
-              <th className="p-2">Name</th>
-              <th className="p-2">Domain</th>
-              <th className="p-2">Lifecycle</th>
+              <th scope="col" className="p-2">Name</th>
+              <th scope="col" className="p-2">Domain</th>
+              <th scope="col" className="p-2">Lifecycle</th>
             </tr>
           </thead>
           <tbody>

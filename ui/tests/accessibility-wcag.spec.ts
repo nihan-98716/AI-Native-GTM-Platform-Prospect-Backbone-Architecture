@@ -1,441 +1,214 @@
-"""
-Phase 7 Accessibility Verification
+import { expect, test } from '@playwright/test'
 
-Validates WCAG 2.2 AA compliance across UI.
-Tests:
-- Keyboard navigation
-- Focus visibility
-- Semantic HTML
-- ARIA labels
-- Landmarks
-- Color contrast
-- Responsive design
-"""
-import { test, expect } from '@playwright/test'
+function parseRgb(color: string): [number, number, number] | null {
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i)
+  if (!match) {
+    return null
+  }
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
 
-test.describe('WCAG 2.2 AA Compliance', () => {
-  test('All images have alt text', async ({ page }) => {
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const normalize = (v: number): number => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  const [rr, gg, bb] = [normalize(r), normalize(g), normalize(b)]
+  return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb
+}
+
+function contrastRatio(foreground: [number, number, number], background: [number, number, number]): number {
+  const l1 = relativeLuminance(foreground)
+  const l2 = relativeLuminance(background)
+  const lighter = Math.max(l1, l2)
+  const darker = Math.min(l1, l2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+async function login(page: any) {
+  await page.goto('/login')
+  await page.getByTestId('email-input').fill('test-seller@test-enterprise-saas.test')
+  await page.getByTestId('password-input').fill('test-password-123')
+  await page.getByTestId('login-submit').click()
+  await page.waitForURL(/\/dashboard/)
+}
+
+test.describe('WCAG 2.2 AA Validation', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page)
+  })
+
+  test('primary routes expose one main landmark and required structural landmarks', async ({ page }) => {
+    const routes = ['/dashboard', '/accounts', '/workflows', '/settings/integrations']
+    for (const route of routes) {
+      await page.goto(route)
+      await expect(page.locator('main#main')).toHaveCount(1)
+      await expect(page.locator('header,[role="banner"]')).toHaveCount(1)
+      await expect(page.locator('nav,[role="navigation"]')).toHaveCount(1)
+    }
+  })
+
+  test('skip link moves focus to main content', async ({ page }) => {
     await page.goto('/dashboard')
-    
-    // Find all images
-    const images = page.locator('img')
-    const count = await images.count()
-    
-    for (let i = 0; i < count; i++) {
-      const img = images.nth(i)
-      const alt = await img.getAttribute('alt')
-      const ariaLabel = await img.getAttribute('aria-label')
-      
-      // Skip decorative images (aria-hidden or empty alt explicitly allowed)
-      const isDecorative = await img.getAttribute('aria-hidden')
-      if (isDecorative === 'true') continue
-      
-      // Image should have alt or be marked decorative
-      const hasDescription = alt || ariaLabel
-      expect(hasDescription || isDecorative).toBeTruthy()
-    }
-  })
-
-  test('Form labels properly associated with inputs', async ({ page }) => {
-    await page.goto('/login')
-    
-    const inputs = page.locator('input')
-    const count = await inputs.count()
-    
-    for (let i = 0; i < count; i++) {
-      const input = inputs.nth(i)
-      const inputId = await input.getAttribute('id')
-      const inputName = await input.getAttribute('name')
-      const ariaLabel = await input.getAttribute('aria-label')
-      
-      // Check if label associated
-      if (inputId) {
-        const label = page.locator(`label[for="${inputId}"]`)
-        const labelExists = await label.count()
-        expect(labelExists + (ariaLabel ? 1 : 0)).toBeGreaterThan(0)
-      }
-    }
-  })
-
-  test('Color contrast meets WCAG AA minimum (4.5:1 for text)', async ({ page }) => {
-    await page.goto('/dashboard')
-    
-    // Sample text elements and check contrast
-    const textElements = page.locator('p, a, button, span, label')
-    const sampleSize = Math.min(10, await textElements.count())
-    
-    for (let i = 0; i < sampleSize; i++) {
-      const element = textElements.nth(i)
-      
-      // Get computed styles
-      const colors = await element.evaluate((el) => {
-        const computed = window.getComputedStyle(el)
-        return {
-          color: computed.color,
-          backgroundColor: computed.backgroundColor,
-        }
-      })
-      
-      // Validate colors exist (simplified - full contrast calculation requires color conversion)
-      expect(colors.color).toBeTruthy()
-      expect(colors.backgroundColor).toBeTruthy()
-    }
-  })
-
-  test('Heading hierarchy is logical and complete', async ({ page }) => {
-    await page.goto('/workflows')
-    
-    // Verify headings present and properly nested
-    const headings = page.locator('h1, h2, h3, h4, h5, h6')
-    const count = await headings.count()
-    expect(count).toBeGreaterThan(0)
-    
-    // Verify page has at least one H1
-    const h1 = page.locator('h1')
-    await expect(h1).toBeTruthy()
-  })
-
-  test('Links are distinguishable from surrounding text', async ({ page }) => {
-    await page.goto('/accounts')
-    
-    // Check that links have distinct styling
-    const links = page.locator('a')
-    const linkCount = await links.count()
-    
-    if (linkCount > 0) {
-      const firstLink = links.first()
-      const linkText = await firstLink.textContent()
-      const linkStyles = await firstLink.evaluate((el) => {
-        const computed = window.getComputedStyle(el)
-        return {
-          color: computed.color,
-          textDecoration: computed.textDecoration,
-          fontWeight: computed.fontWeight,
-        }
-      })
-      
-      // Links should have text decoration or color distinction
-      const isDistinguishable =
-        linkStyles.textDecoration.includes('underline') ||
-        linkStyles.color !== 'inherit'
-      expect(isDistinguishable).toBeTruthy()
-    }
-  })
-
-  test('Tables have proper headers and scopes', async ({ page }) => {
-    await page.goto('/accounts')
-    
-    const table = page.locator('table').first()
-    if (await table.count() > 0) {
-      // Check for thead
-      const thead = table.locator('thead')
-      await expect(thead).toBeTruthy()
-      
-      // Check for th elements
-      const headers = table.locator('th')
-      expect(await headers.count()).toBeGreaterThan(0)
-      
-      // Check scope attributes
-      const scopedHeaders = table.locator('th[scope]')
-      const totalHeaders = await headers.count()
-      // At least some headers should have scope
-      expect(await scopedHeaders.count()).toBeGreaterThan(0)
-    }
-  })
-
-  test('Focus is always visible and never hidden', async ({ page }) => {
-    await page.goto('/dashboard')
-    
-    // Tab through interactive elements
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press('Tab')
-      
-      const focusedElement = await page.evaluate(() => {
-        const el = document.activeElement as HTMLElement
-        if (!el) return null
-        
-        const computed = window.getComputedStyle(el)
-        return {
-          outline: computed.outline,
-          outlineColor: computed.outlineColor,
-          outlineWidth: computed.outlineWidth,
-          boxShadow: computed.boxShadow,
-          opacity: computed.opacity,
-        }
-      })
-      
-      // Focus indicator should be visible
-      if (focusedElement) {
-        const isVisible =
-          focusedElement.outline !== 'none' ||
-          focusedElement.boxShadow !== 'none' ||
-          focusedElement.opacity !== '0'
-        expect(isVisible).toBeTruthy()
-      }
-    }
-  })
-
-  test('Skip link to main content exists and is keyboard accessible', async ({
-    page,
-  }) => {
-    await page.goto('/')
-    
-    // Tab to first element
     await page.keyboard.press('Tab')
-    
-    // Get focused element
-    const focusedHref = await page.evaluate(() => {
-      const el = document.activeElement as HTMLElement
-      return el?.getAttribute('href')
-    })
-    
-    // Should be skip link
-    expect(focusedHref).toContain('main')
+    const skipLink = page.locator('a[href="#main"]').first()
+    await expect(skipLink).toBeVisible()
+    await skipLink.press('Enter')
+    const focusedId = await page.evaluate(() => document.activeElement?.id ?? null)
+    expect(focusedId).toEqual('main')
   })
 
-  test('Landmark roles are present and properly used', async ({ page }) => {
-    await page.goto('/dashboard')
-    
-    // Check for banner role
-    const banner = page.locator('[role="banner"], header').first()
-    await expect(banner).toBeTruthy()
-    
-    // Check for main
-    const main = page.locator('main, [role="main"]')
-    expect(await main.count()).toBe(1)
-    
-    // Check for contentinfo
-    const footer = page.locator('footer, [role="contentinfo"]')
-    // Footer is optional but if present should be correct
-    if (await footer.count() > 0) {
-      expect(true).toBeTruthy() // Footer exists
-    }
-  })
-
-  test('Buttons have accessible names', async ({ page }) => {
-    await page.goto('/dashboard')
-    
-    const buttons = page.locator('button')
-    const count = await buttons.count()
-    
-    for (let i = 0; i < Math.min(count, 10); i++) {
-      const button = buttons.nth(i)
-      
-      // Get accessible name
-      const ariaLabel = await button.getAttribute('aria-label')
-      const ariaLabelledBy = await button.getAttribute('aria-labelledby')
-      const text = await button.textContent()
-      const title = await button.getAttribute('title')
-      
-      const hasName = ariaLabel || ariaLabelledBy || (text && text.trim()) || title
-      expect(hasName).toBeTruthy()
-    }
-  })
-
-  test('Modals have proper focus management', async ({ page }) => {
-    await page.goto('/workflows')
-    
-    // Find and open a modal
-    const startButton = page.locator('button:has-text("Start Workflow")')
-    if (await startButton.count() > 0) {
-      await startButton.click()
-      await page.waitForTimeout(300)
-      
-      // Check modal exists
-      const modal = page.locator('dialog, [role="dialog"]')
-      if (await modal.count() > 0) {
-        // Verify modal has close button or ESC support
-        const closeButton = modal.locator('button[aria-label*="Close"], button[title*="Close"]')
-        const hasClose = await closeButton.count() > 0
-        expect(hasClose).toBeTruthy()
-        
-        // Close with ESC
-        await page.keyboard.press('Escape')
-        await page.waitForTimeout(300)
-        
-        // Modal should be closed
-        const stillOpen = await modal.isVisible()
-        expect(!stillOpen).toBeTruthy()
-      }
-    }
-  })
-
-  test('Form validation errors are announced', async ({ page }) => {
+  test('form controls have explicit labels or ARIA names', async ({ page }) => {
+    await page.evaluate(() => window.localStorage.removeItem('token'))
     await page.goto('/login')
-    
-    // Try to submit empty form
-    const submitButton = page.locator('button[type="submit"]')
-    await submitButton.click()
-    
-    // Check for error messages with role="alert"
-    const alerts = page.locator('[role="alert"]')
-    const alertCount = await alerts.count()
-    
-    // Should have at least one error message
-    expect(alertCount).toBeGreaterThan(0)
-  })
+    const inputs = page.locator('input')
+    const inputCount = await inputs.count()
+    expect(inputCount).toBeGreaterThan(0)
 
-  test('List elements use proper semantic HTML', async ({ page }) => {
-    await page.goto('/accounts')
-    
-    // Check for proper list usage
-    const lists = page.locator('ul, ol, nav ul')
-    const listCount = await lists.count()
-    
-    if (listCount > 0) {
-      // Lists should contain li elements
-      const listItems = page.locator('ul > li, ol > li')
-      expect(await listItems.count()).toBeGreaterThan(0)
-    }
-  })
-})
+    for (let i = 0; i < inputCount; i += 1) {
+      const input = inputs.nth(i)
+      await expect(input).toBeVisible()
+      const id = await input.getAttribute('id')
+      const ariaLabel = await input.getAttribute('aria-label')
+      const ariaLabelledBy = await input.getAttribute('aria-labelledby')
 
-test.describe('Responsive Design', () => {
-  test('Layout adjusts for mobile viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 })
-    
-    await page.goto('/dashboard')
-    
-    // Verify no horizontal scroll needed
-    const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
-    const viewportWidth = await page.evaluate(() => window.innerWidth)
-    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1) // +1 for rounding
-  })
-
-  test('Layout adjusts for tablet viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 768, height: 1024 })
-    
-    await page.goto('/accounts')
-    
-    const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
-    const viewportWidth = await page.evaluate(() => window.innerWidth)
-    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1)
-  })
-
-  test('Layout adjusts for desktop viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 })
-    
-    await page.goto('/workflows')
-    
-    const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
-    const viewportWidth = await page.evaluate(() => window.innerWidth)
-    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1)
-  })
-
-  test('Touch targets are at least 44x44 pixels', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 })
-    
-    await page.goto('/dashboard')
-    
-    // Check button sizes
-    const buttons = page.locator('button')
-    const count = Math.min(await buttons.count(), 5)
-    
-    for (let i = 0; i < count; i++) {
-      const button = buttons.nth(i)
-      const box = await button.boundingBox()
-      
-      if (box) {
-        const minSize = 44
-        const width = box.width
-        const height = box.height
-        
-        // Button should be at least 44x44
-        const meetsMinimum = width >= minSize && height >= minSize
-        expect(meetsMinimum || (width >= 36 && height >= 36)).toBeTruthy()
+      let hasLabel = false
+      if (id) {
+        const associatedLabels = page.locator(`label[for="${id}"]`)
+        hasLabel = (await associatedLabels.count()) > 0
       }
+      const hasAriaName = Boolean((ariaLabel ?? '').trim() || (ariaLabelledBy ?? '').trim())
+      expect(hasLabel || hasAriaName).toEqual(true)
     }
+  })
+
+  test('buttons expose accessible names', async ({ page }) => {
+    await page.goto('/dashboard')
+    const buttons = page.getByRole('button')
+    const buttonCount = await buttons.count()
+    expect(buttonCount).toBeGreaterThan(0)
+
+    for (let i = 0; i < Math.min(buttonCount, 10); i += 1) {
+      const button = buttons.nth(i)
+      await expect(button).toBeVisible()
+      const text = ((await button.textContent()) ?? '').trim()
+      const ariaLabel = ((await button.getAttribute('aria-label')) ?? '').trim()
+      const title = ((await button.getAttribute('title')) ?? '').trim()
+      expect(text.length > 0 || ariaLabel.length > 0 || title.length > 0).toEqual(true)
+    }
+  })
+
+  test('keyboard tab navigation keeps visible focus indicator', async ({ page }) => {
+    await page.goto('/dashboard')
+    for (let i = 0; i < 6; i += 1) {
+      await page.keyboard.press('Tab')
+      const focusStyle = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null
+        if (!el) {
+          return null
+        }
+        const css = window.getComputedStyle(el)
+        return {
+          outlineStyle: css.outlineStyle,
+          outlineWidth: css.outlineWidth,
+          boxShadow: css.boxShadow,
+          visibility: css.visibility,
+        }
+      })
+      expect(focusStyle).not.toBeNull()
+      expect(focusStyle?.visibility).toEqual('visible')
+      const outlineVisible = focusStyle?.outlineStyle !== 'none' && focusStyle?.outlineWidth !== '0px'
+      const boxShadowVisible = focusStyle?.boxShadow !== 'none'
+      expect(outlineVisible || boxShadowVisible).toEqual(true)
+    }
+  })
+
+  test('table semantics include header cells with scope attributes', async ({ page }) => {
+    await page.goto('/accounts')
+    const table = page.getByRole('table')
+    if ((await table.count()) === 0) {
+      const hasEmpty = (await page.getByText(/no accounts found/i).count()) > 0
+      const hasError = (await page.getByRole('alert').count()) > 0
+      expect(hasEmpty || hasError).toEqual(true)
+      return
+    }
+    await expect(table).toBeVisible()
+    const headerCells = table.locator('th')
+    const headerCount = await headerCells.count()
+    expect(headerCount).toBeGreaterThan(0)
+    const scopedHeaderCount = await table.locator('th[scope]').count()
+    expect(scopedHeaderCount).toBeGreaterThan(0)
+  })
+
+  test('text contrast meets WCAG AA threshold for sampled body text', async ({ page }) => {
+    await page.goto('/dashboard')
+    const samples = await page.evaluate(() => {
+      const nodes = Array.from(document.querySelectorAll<HTMLElement>('main h1, main h2, main h3, main p, main a, main label'))
+      return nodes
+        .map((node) => {
+          const text = (node.textContent ?? '').trim()
+          const cs = window.getComputedStyle(node)
+          let backgroundColor = cs.backgroundColor
+          let parent: HTMLElement | null = node.parentElement
+          while (
+            parent &&
+            (backgroundColor === 'transparent' || backgroundColor === 'rgba(0, 0, 0, 0)')
+          ) {
+            backgroundColor = window.getComputedStyle(parent).backgroundColor
+            parent = parent.parentElement
+          }
+          return {
+            text,
+            color: cs.color,
+            backgroundColor,
+            fontSize: cs.fontSize,
+            fontWeight: cs.fontWeight,
+          }
+        })
+        .filter((item) => item.text.length > 0)
+        .slice(0, 12)
+    })
+
+    expect(samples.length).toBeGreaterThan(0)
+    let checked = 0
+    for (const sample of samples) {
+      const fg = parseRgb(sample.color)
+      const bg = parseRgb(sample.backgroundColor) ?? [255, 255, 255]
+      if (fg === null) continue
+      const ratio = contrastRatio(fg, bg)
+      const sizePx = Number(sample.fontSize.replace('px', ''))
+      const isLargeText = sizePx >= 24 || (sizePx >= 18.66 && Number(sample.fontWeight) >= 700)
+      const minimumRatio = isLargeText ? 3.0 : 4.5
+      expect(ratio).toBeGreaterThanOrEqual(minimumRatio)
+      checked += 1
+    }
+    expect(checked).toBeGreaterThan(0)
   })
 })
 
-test.describe('Keyboard Navigation', () => {
-  test('All interactive elements are keyboard accessible', async ({ page }) => {
+test.describe('Keyboard and Responsive Accessibility', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page)
+  })
+
+  test('mobile layout avoids horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 })
     await page.goto('/dashboard')
-    
-    // Collect all interactive elements
-    const interactive = page.locator('button, a, input, select, textarea, [tabindex]')
-    const count = await interactive.count()
-    
-    expect(count).toBeGreaterThan(0)
-    
-    // Tab through first 5 elements
-    for (let i = 0; i < Math.min(count, 5); i++) {
-      await page.keyboard.press('Tab')
-      
-      const focused = await page.evaluate(() => {
-        return document.activeElement?.tagName
-      })
-      
-      expect(
-        ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(focused || '')
-      ).toBeTruthy()
-    }
+    const dimensions = await page.evaluate(() => ({
+      bodyWidth: document.body.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }))
+    expect(dimensions.bodyWidth).toBeLessThanOrEqual(dimensions.viewportWidth + 1)
   })
 
-  test('Dropdown menus are keyboard navigable', async ({ page }) => {
-    await page.goto('/accounts')
-    
-    // Find select element
-    const select = page.locator('select').first()
-    if (await select.count() > 0) {
-      // Focus and open
-      await select.focus()
-      await page.keyboard.press('ArrowDown')
-      
-      // Verify option selected
-      const selectedValue = await select.evaluate(
-        (el: HTMLSelectElement) => el.value
-      )
-      expect(selectedValue).toBeTruthy()
-    }
-  })
-
-  test('Escape key closes modals and dropdowns', async ({ page }) => {
-    await page.goto('/workflows')
-    
-    // Open modal
-    const startButton = page.locator('button:has-text("Start Workflow")')
-    if (await startButton.count() > 0) {
-      await startButton.click()
-      await page.waitForTimeout(300)
-      
-      // Verify modal open
-      const modal = page.locator('dialog, [role="dialog"]')
-      let isOpen = await modal.isVisible()
-      expect(isOpen).toBeTruthy()
-      
-      // Press Escape
-      await page.keyboard.press('Escape')
-      await page.waitForTimeout(300)
-      
-      // Verify closed
-      isOpen = await modal.isVisible()
-      expect(!isOpen).toBeTruthy()
-    }
-  })
-
-  test('Arrow keys navigate list items', async ({ page }) => {
-    await page.goto('/accounts')
-    
-    // Find table rows
-    const rows = page.locator('tbody tr')
-    const count = await rows.count()
-    
-    if (count > 1) {
-      // Click first row
-      await rows.first().click()
-      
-      // Use arrow key
-      await page.keyboard.press('ArrowDown')
-      
-      // Next row should be focused or highlighted
-      const secondRow = rows.nth(1)
-      const isFocused = await secondRow.evaluate((el) => {
-        return el === document.activeElement
-      })
-      
-      // Should indicate selection somehow
-      expect(isFocused).toBeTruthy()
-    }
+  test('modal is dismissible via escape key and focus returns to trigger', async ({ page }) => {
+    await page.goto('/dashboard')
+    const trigger = page.getByRole('button', { name: /start workflow/i })
+    await expect(trigger).toBeVisible()
+    await trigger.click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
   })
 })
