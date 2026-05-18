@@ -41,7 +41,7 @@ class IntegrationRun(UUIDPrimaryKeyMixin, TenantOwnedMixin, TimestampMixin, Base
             ["tenant_id", "connection_id"],
             ["integration_connections.tenant_id", "integration_connections.id"],
         ),
-        CheckConstraint("status in ('pending', 'running', 'completed', 'failed', 'timed_out', 'cancelled')", name="ck_integration_runs_status"),
+        CheckConstraint("status in ('pending', 'running', 'completed', 'failed', 'timed_out', 'cancelled', 'rate_limited')", name="ck_integration_runs_status"),
         Index("ix_integration_runs_tenant_provider_status", "tenant_id", "provider", "status"),
         Index("ix_integration_runs_tenant_created", "tenant_id", "created_at"),
     )

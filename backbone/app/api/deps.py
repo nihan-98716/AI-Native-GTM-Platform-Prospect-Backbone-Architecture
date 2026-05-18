@@ -12,8 +12,12 @@ from app.core.rate_limit import FixedWindowRateLimiter
 from app.core.tenancy import TenantContext, set_tenant_context
 from app.repositories.account_repository import SqlAccountRepository
 from app.repositories.audit_repository import SqlAuditEventRepository
+from app.repositories.integration_repository import SqlIntegrationRepository
 from app.repositories.prospect_workflow_repository import SqlProspectWorkflowRepository
+from app.integrations.providers import ApolloIntegrationProvider
+from app.integrations.registry import IntegrationProviderRegistry
 from app.services.accounts import AccountsService
+from app.services.integrations import IntegrationService
 from app.services.prospect import ProspectWorkflowService
 from app.storage.db import get_session
 
@@ -81,10 +85,47 @@ def get_agent_llm(settings: Settings = Depends(get_settings)) -> OpenAIChatLLM:
     return OpenAIChatLLM.from_settings(settings)
 
 
+def get_integration_provider_registry(settings: Settings = Depends(get_settings)) -> IntegrationProviderRegistry:
+    providers = []
+    enabled = settings.integration_providers or [settings.integration_default_provider]
+    for provider_name in enabled:
+        if provider_name == "apollo":
+            providers.append(
+                ApolloIntegrationProvider(
+                    api_key=settings.apollo_api_key,
+                    base_url=settings.apollo_base_url,
+                    allowed_hosts=tuple(settings.apollo_allowed_hosts or []),
+                )
+            )
+            continue
+        raise RuntimeError(f"Unsupported integration provider '{provider_name}'.")
+    return IntegrationProviderRegistry(providers)
+
+
+def get_integration_service(
+    session: Session = Depends(get_db_session),
+    audit_service: SqlAuditService = Depends(get_audit_service),
+    registry: IntegrationProviderRegistry = Depends(get_integration_provider_registry),
+    settings: Settings = Depends(get_settings),
+) -> IntegrationService:
+    return IntegrationService(
+        repository=SqlIntegrationRepository(session),
+        registry=registry,
+        audit_service=audit_service,
+        settings=settings,
+    )
+
+
 def get_prospect_workflow_service(
     session: Session = Depends(get_db_session),
     audit_service: SqlAuditService = Depends(get_audit_service),
+    integration_service: IntegrationService = Depends(get_integration_service),
     llm: OpenAIChatLLM = Depends(get_agent_llm),
 ) -> ProspectWorkflowService:
-    return ProspectWorkflowService(repository=SqlProspectWorkflowRepository(session), audit_service=audit_service, llm=llm)
+    return ProspectWorkflowService(
+        repository=SqlProspectWorkflowRepository(session),
+        audit_service=audit_service,
+        integration_service=integration_service,
+        llm=llm,
+    )
 

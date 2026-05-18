@@ -30,6 +30,22 @@ class Settings:
     llm_model: str = "gpt-4.1-mini"
     llm_api_key: str | None = None
     llm_base_url: str | None = None
+    integration_default_provider: str = "apollo"
+    integration_rate_limit_per_minute: int = 60
+    integration_retry_max_attempts: int = 3
+    integration_retry_backoff_ms: int = 50
+    integration_circuit_breaker_threshold: int = 3
+    integration_circuit_breaker_open_seconds: int = 60
+    integration_providers: list[str] | None = None
+    workflow_queue_threshold: int = 50
+    workflow_concurrent_limit: int = 4
+    workflow_retry_max_attempts: int = 2
+    workflow_job_timeout_seconds: int = 300
+    workflow_inline_execution: bool = True
+    workflow_redis_url: str | None = None
+    apollo_api_key: str | None = None
+    apollo_base_url: str = "https://api.apollo.io"
+    apollo_allowed_hosts: list[str] | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -48,6 +64,22 @@ class Settings:
             llm_model=os.getenv("LLM_MODEL", "gpt-4.1-mini"),
             llm_api_key=os.getenv("OPENAI_API_KEY"),
             llm_base_url=os.getenv("OPENAI_BASE_URL"),
+            integration_default_provider=os.getenv("INTEGRATION_DEFAULT_PROVIDER", "apollo"),
+            integration_rate_limit_per_minute=int(os.getenv("INTEGRATION_RATE_LIMIT_PER_MINUTE", "60")),
+            integration_retry_max_attempts=int(os.getenv("INTEGRATION_RETRY_MAX_ATTEMPTS", "3")),
+            integration_retry_backoff_ms=int(os.getenv("INTEGRATION_RETRY_BACKOFF_MS", "50")),
+            integration_circuit_breaker_threshold=int(os.getenv("INTEGRATION_CIRCUIT_BREAKER_THRESHOLD", "3")),
+            integration_circuit_breaker_open_seconds=int(os.getenv("INTEGRATION_CIRCUIT_BREAKER_OPEN_SECONDS", "60")),
+            integration_providers=_as_list(os.getenv("INTEGRATION_PROVIDERS", "apollo")),
+            workflow_queue_threshold=int(os.getenv("WORKFLOW_QUEUE_THRESHOLD", "50")),
+            workflow_concurrent_limit=int(os.getenv("WORKFLOW_CONCURRENT_LIMIT", "4")),
+            workflow_retry_max_attempts=int(os.getenv("WORKFLOW_RETRY_MAX_ATTEMPTS", "2")),
+            workflow_job_timeout_seconds=int(os.getenv("WORKFLOW_JOB_TIMEOUT_SECONDS", "300")),
+            workflow_inline_execution=_as_bool(os.getenv("WORKFLOW_INLINE_EXECUTION"), True),
+            workflow_redis_url=os.getenv("WORKFLOW_REDIS_URL"),
+            apollo_api_key=os.getenv("APOLLO_API_KEY"),
+            apollo_base_url=os.getenv("APOLLO_BASE_URL", "https://api.apollo.io"),
+            apollo_allowed_hosts=_as_list(os.getenv("APOLLO_ALLOWED_HOSTS", "api.apollo.io,apollo.io")),
         )
 
 

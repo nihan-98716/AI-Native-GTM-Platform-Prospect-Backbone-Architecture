@@ -47,6 +47,7 @@ class ObservabilityRuntime:
         correlation_id: str | None = None,
         request_id: str | None = None,
     ) -> dict:
+        duration_ms = max(1, duration_ms)
         resolved_trace, resolved_correlation = (trace_id, correlation_id)
         if not resolved_trace or not resolved_correlation:
             generated_trace, generated_correlation = self._tracer.next_ids()

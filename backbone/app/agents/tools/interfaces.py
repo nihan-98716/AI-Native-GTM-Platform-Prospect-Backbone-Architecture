@@ -14,6 +14,7 @@ from app.contracts.tools import (
 )
 from app.contracts.workflows.lifecycle import WorkflowStart
 from app.core.tenancy import TenantContext
+from app.contracts.integrations import IntegrationSearchAccountsOutput, IntegrationEnrichContactsOutput, IntegrationDiscoverSignalsOutput
 
 
 class ProspectAgentTools(Protocol):
@@ -44,6 +45,40 @@ class ProspectAgentTools(Protocol):
         ...
 
     def get_signals(self, *, tenant_id: str, account_ids: list[str]) -> list[SignalToolRecord]:
+        ...
+
+    def search_provider_accounts(
+        self,
+        *,
+        tenant_id: str,
+        workflow_run_id: str,
+        query: str | None,
+        limit: int,
+        trace_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
+        ...
+
+    def enrich_provider_contacts(
+        self,
+        *,
+        tenant_id: str,
+        workflow_run_id: str,
+        account_ids: list[str],
+        trace_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
+        ...
+
+    def discover_provider_signals(
+        self,
+        *,
+        tenant_id: str,
+        workflow_run_id: str,
+        account_ids: list[str],
+        trace_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         ...
 
     def save_hypotheses(

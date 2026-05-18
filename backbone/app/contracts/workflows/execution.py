@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.contracts.agents import (
@@ -18,6 +20,7 @@ class WorkflowEvidence(BaseModel):
     tool_call_ids: list[str] = Field(default_factory=list)
     approval_request_ids: list[str] = Field(default_factory=list)
     trace_ids: list[str] = Field(default_factory=list)
+    status_transitions: list[dict] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
 
@@ -53,6 +56,12 @@ class ProspectWorkflowExecutionState(BaseModel):
     outreach_drafts: list[OutreachDraftProposal] = Field(default_factory=list)
     approval_status: ApprovalStatus | None = None
     approval_request_id: str | None = None
+    retry_count: int = 0
+    attempt_metadata: list[dict] = Field(default_factory=list)
+    source_provider: str | None = None
+    source_type: str | None = None
+    ingestion_timestamp: datetime | None = None
+    source_record_id: str | None = None
     evidence: WorkflowEvidence = Field(default_factory=WorkflowEvidence)
     estimated_cost_usd: float = 0
     estimated_latency_ms: int = 0

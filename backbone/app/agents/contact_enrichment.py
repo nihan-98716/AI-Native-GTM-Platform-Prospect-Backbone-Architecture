@@ -47,7 +47,23 @@ class ContactEnrichmentAgent:
                             "required": ["account_ids"],
                             "additionalProperties": False,
                         },
-                    )
+                    ),
+                    LLMToolSpec(
+                        name="enrich_provider_contacts",
+                        description="Ask the live integration provider to enrich contacts for the supplied account identifiers.",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "account_ids": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                }
+                            },
+                            "required": ["account_ids"],
+                            "additionalProperties": False,
+                        },
+                    ),
                 ],
                 tool_handlers={
                     "get_contacts": lambda arguments: [
@@ -56,7 +72,14 @@ class ContactEnrichmentAgent:
                             tenant_id=payload.tenant_id,
                             account_ids=list(arguments.get("account_ids", payload.account_ids)),
                         )
-                    ]
+                    ],
+                    "enrich_provider_contacts": lambda arguments: self._tools.enrich_provider_contacts(
+                        tenant_id=payload.tenant_id,
+                        workflow_run_id=payload.workflow_run_id,
+                        account_ids=list(arguments.get("account_ids", payload.account_ids)),
+                        trace_id=context.trace_id if context else None,
+                        correlation_id=context.correlation_id if context else None,
+                    ),
                 },
             )
             return plan.payload, plan.reasoning_summary, plan.tool_invocations
