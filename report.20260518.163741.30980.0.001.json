@@ -1,0 +1,629 @@
+
+{
+  "header": {
+    "reportVersion": 5,
+    "event": "Allocation failed - JavaScript heap out of memory",
+    "trigger": "OOMError",
+    "filename": "report.20260518.163741.30980.0.001.json",
+    "dumpEventTime": "2026-05-18T16:37:41Z",
+    "dumpEventTimeStamp": "1779102461334",
+    "processId": 30980,
+    "threadId": null,
+    "cwd": "C:\\Users\\Public\\Projects\\Topcoder1",
+    "commandLine": [
+      "C:\\Users\\ASUS\\AppData\\Roaming\\npm\\node_modules\\@github\\copilot\\node_modules\\@github\\copilot-win32-x64\\copilot.exe",
+      "--no-warnings",
+      "--report-on-fatalerror",
+      "--optimize-for-size",
+      "--expose-gc",
+      "--no-maglev",
+      "--no-sparkplug",
+      "C:\\Users\\ASUS\\AppData\\Roaming\\npm\\node_modules\\@github\\copilot\\node_modules\\@github\\copilot-win32-x64\\copilot.exe",
+      "--resume=00a94c9c-b110-4a1e-adb7-7f15c22c0553"
+    ],
+    "nodejsVersion": "v24.15.0",
+    "wordSize": 64,
+    "arch": "x64",
+    "platform": "win32",
+    "componentVersions": {
+      "acorn": "8.16.0",
+      "ada": "3.4.4",
+      "amaro": "1.1.8",
+      "ares": "1.34.6",
+      "brotli": "1.2.0",
+      "cldr": "48.0",
+      "icu": "78.2",
+      "llhttp": "9.3.1",
+      "merve": "1.2.2",
+      "modules": "137",
+      "napi": "10",
+      "nbytes": "0.1.3",
+      "ncrypto": "0.0.1",
+      "nghttp2": "1.68.0",
+      "node": "24.15.0",
+      "openssl": "3.5.5",
+      "simdjson": "4.5.0",
+      "simdutf": "6.4.0",
+      "sqlite": "3.51.3",
+      "tz": "2026a",
+      "undici": "7.24.4",
+      "unicode": "17.0",
+      "uv": "1.51.0",
+      "uvwasi": "0.0.23",
+      "v8": "13.6.233.17-node.48",
+      "zlib": "1.3.1-e00f703",
+      "zstd": "1.5.7"
+    },
+    "release": {
+      "name": "node",
+      "lts": "Krypton",
+      "headersUrl": "https://nodejs.org/download/release/v24.15.0/node-v24.15.0-headers.tar.gz",
+      "sourceUrl": "https://nodejs.org/download/release/v24.15.0/node-v24.15.0.tar.gz",
+      "libUrl": "https://nodejs.org/download/release/v24.15.0/win-x64/node.lib"
+    },
+    "osName": "Windows_NT",
+    "osRelease": "10.0.26200",
+    "osVersion": "Windows 11 Pro",
+    "osMachine": "x86_64",
+    "cpus": [
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 5406046,
+        "nice": 0,
+        "sys": 6355343,
+        "idle": 71487281,
+        "irq": 1103875
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 4518437,
+        "nice": 0,
+        "sys": 4340890,
+        "idle": 74389265,
+        "irq": 367609
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 5745890,
+        "nice": 0,
+        "sys": 4500218,
+        "idle": 73002484,
+        "irq": 291312
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 4695343,
+        "nice": 0,
+        "sys": 3797437,
+        "idle": 74755812,
+        "irq": 249265
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 4587281,
+        "nice": 0,
+        "sys": 4786281,
+        "idle": 73875031,
+        "irq": 306031
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 3330296,
+        "nice": 0,
+        "sys": 3710015,
+        "idle": 76208281,
+        "irq": 235562
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 3813187,
+        "nice": 0,
+        "sys": 3818515,
+        "idle": 75616890,
+        "irq": 232921
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 2957906,
+        "nice": 0,
+        "sys": 2896343,
+        "idle": 77394343,
+        "irq": 190921
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 2812921,
+        "nice": 0,
+        "sys": 3276046,
+        "idle": 77159625,
+        "irq": 217890
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 2640734,
+        "nice": 0,
+        "sys": 2799875,
+        "idle": 77807984,
+        "irq": 200406
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 3331750,
+        "nice": 0,
+        "sys": 3258062,
+        "idle": 76658781,
+        "irq": 202703
+      },
+      {
+        "model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+        "speed": 2688,
+        "user": 2788140,
+        "nice": 0,
+        "sys": 2642250,
+        "idle": 77818203,
+        "irq": 177578
+      }
+    ],
+    "networkInterfaces": [
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "ee:70:2c:38:f6:15",
+        "address": "2409:40f4:210d:2e49:bbd0:e582:eebb:3149",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 0
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "ee:70:2c:38:f6:15",
+        "address": "2409:40f4:2012:1fa7:b90d:7fe:56a7:fc16",
+        "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+        "family": "IPv6",
+        "scopeid": 0
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "ee:70:2c:38:f6:15",
+        "address": "2409:40f4:2012:1fa7:bbff:e50:c249:9f57",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 0
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "ee:70:2c:38:f6:15",
+        "address": "2409:40f4:210d:2e49:b90d:7fe:56a7:fc16",
+        "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+        "family": "IPv6",
+        "scopeid": 0
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "ee:70:2c:38:f6:15",
+        "address": "fe80::f601:8714:bdb8:90b0",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 10
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "ee:70:2c:38:f6:15",
+        "address": "10.222.31.205",
+        "netmask": "255.255.255.0",
+        "family": "IPv4"
+      },
+      {
+        "name": "Loopback Pseudo-Interface 1",
+        "internal": true,
+        "mac": "00:00:00:00:00:00",
+        "address": "::1",
+        "netmask": "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+        "family": "IPv6",
+        "scopeid": 0
+      },
+      {
+        "name": "Loopback Pseudo-Interface 1",
+        "internal": true,
+        "mac": "00:00:00:00:00:00",
+        "address": "127.0.0.1",
+        "netmask": "255.0.0.0",
+        "family": "IPv4"
+      },
+      {
+        "name": "vEthernet (WSL (Hyper-V firewall))",
+        "internal": false,
+        "mac": "00:15:5d:ff:4e:5c",
+        "address": "fe80::e545:8209:341c:c3f8",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 29
+      },
+      {
+        "name": "vEthernet (WSL (Hyper-V firewall))",
+        "internal": false,
+        "mac": "00:15:5d:ff:4e:5c",
+        "address": "172.17.48.1",
+        "netmask": "255.255.240.0",
+        "family": "IPv4"
+      }
+    ],
+    "host": "Icarus"
+  },
+  "javascriptStack": {
+    "message": "No stack.",
+    "stack": [
+      "Unavailable."
+    ],
+    "errorProperties": {
+    }
+  },
+  "javascriptHeap": {
+    "totalMemory": 157057024,
+    "executableMemory": 10231808,
+    "totalCommittedMemory": 157057024,
+    "availableMemory": 2011562008,
+    "totalGlobalHandlesMemory": 168008,
+    "usedGlobalHandlesMemory": 29344,
+    "usedMemory": 139654496,
+    "memoryLimit": 2150629376,
+    "mallocedMemory": 2129968,
+    "externalMemory": 45615290,
+    "peakMallocedMemory": 77828352,
+    "nativeContextCount": 3,
+    "detachedContextCount": 0,
+    "doesZapGarbage": 0,
+    "heapSpaces": {
+      "read_only_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "new_space": {
+        "memorySize": 1048576,
+        "committedMemory": 1048576,
+        "capacity": 1048512,
+        "used": 1048512,
+        "available": 0
+      },
+      "old_space": {
+        "memorySize": 137207808,
+        "committedMemory": 137207808,
+        "capacity": 136805080,
+        "used": 121283952,
+        "available": 15521128
+      },
+      "code_space": {
+        "memorySize": 8126464,
+        "committedMemory": 8126464,
+        "capacity": 8125472,
+        "used": 7284608,
+        "available": 840864
+      },
+      "shared_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "trusted_space": {
+        "memorySize": 5853184,
+        "committedMemory": 5853184,
+        "capacity": 5834488,
+        "used": 5255400,
+        "available": 579088
+      },
+      "shared_trusted_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "new_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 1048576,
+        "used": 0,
+        "available": 1048576
+      },
+      "large_object_space": {
+        "memorySize": 2478080,
+        "committedMemory": 2478080,
+        "capacity": 2450184,
+        "used": 2450184,
+        "available": 0
+      },
+      "code_large_object_space": {
+        "memorySize": 2105344,
+        "committedMemory": 2105344,
+        "capacity": 2096704,
+        "used": 2096704,
+        "available": 0
+      },
+      "shared_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "shared_trusted_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 0,
+        "used": 0,
+        "available": 0
+      },
+      "trusted_large_object_space": {
+        "memorySize": 237568,
+        "committedMemory": 237568,
+        "capacity": 235136,
+        "used": 235136,
+        "available": 0
+      }
+    }
+  },
+  "nativeStack": [
+    {
+      "pc": "0x00007ff7917ca9f7",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7917c7c6c",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7917cc998",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff791893f77",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7924dfaa7",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922e04d7",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff792278efb",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff79225094e",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922e2f72",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922e1f27",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922f2e52",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922f297b",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff79377a2ad",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922ddfa0",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7922f87ea",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff792304c86",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff791ed69c7",
+      "symbol": ""
+    },
+    {
+      "pc": "0x0000013edc0f75fa",
+      "symbol": ""
+    }
+  ],
+  "resourceUsage": {
+    "free_memory": 463159296,
+    "total_memory": 8298360832,
+    "rss": 146669568,
+    "available_memory": 463163392,
+    "userCpuSeconds": 373.906,
+    "kernelCpuSeconds": 41.781,
+    "cpuConsumptionPercent": 40.9948,
+    "userCpuConsumptionPercent": 36.8744,
+    "kernelCpuConsumptionPercent": 4.12041,
+    "maxRss": 235696128,
+    "pageFaults": {
+      "IORequired": 1376675,
+      "IONotRequired": 0
+    },
+    "fsActivity": {
+      "reads": 2436,
+      "writes": 474
+    }
+  },
+  "uvthreadResourceUsage": {
+    "userCpuSeconds": 215.859,
+    "kernelCpuSeconds": 30.468,
+    "cpuConsumptionPercent": 24.2926,
+    "userCpuConsumptionPercent": 21.2879,
+    "kernelCpuConsumptionPercent": 3.00473,
+    "fsActivity": {
+      "reads": 0,
+      "writes": 0
+    }
+  },
+  "libuv": [
+  ],
+  "workers": [
+  ],
+  "environmentVariables": {
+    "ACSetupSvcPort": "23210",
+    "ALLUSERSPROFILE": "C:\\ProgramData",
+    "APPDATA": "C:\\Users\\ASUS\\AppData\\Roaming",
+    "CommonProgramFiles": "C:\\Program Files\\Common Files",
+    "CommonProgramFiles(x86)": "C:\\Program Files (x86)\\Common Files",
+    "CommonProgramW6432": "C:\\Program Files\\Common Files",
+    "COMPUTERNAME": "ICARUS",
+    "ComSpec": "C:\\Windows\\system32\\cmd.exe",
+    "COPILOT_CLI_BINARY_VERSION": "1.0.48",
+    "COPILOT_LOADER_PID": "39136",
+    "COPILOT_RUN_APP": "1",
+    "DriverData": "C:\\Windows\\System32\\Drivers\\DriverData",
+    "GIT_CONFIG_COUNT": "1",
+    "GIT_CONFIG_KEY_0": "safe.bareRepository",
+    "GIT_CONFIG_VALUE_0": "explicit",
+    "HOMEDRIVE": "C:",
+    "HOMEPATH": "\\Users\\ASUS",
+    "LOCALAPPDATA": "C:\\Users\\ASUS\\AppData\\Local",
+    "LOGONSERVER": "\\\\ICARUS",
+    "NODE_ENV": "production",
+    "NUMBER_OF_PROCESSORS": "12",
+    "OneDrive": "C:\\Users\\ASUS\\OneDrive",
+    "OS": "Windows_NT",
+    "Path": "C:\\Program Files\\WindowsApps\\Microsoft.PowerShell_7.6.1.0_x64__8wekyb3d8bbwe;C:\\Program Files\\Python311\\Scripts\\;C:\\Program Files\\Python311\\;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Windows\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs\\;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR;C:\\Program Files\\starship\\bin\\;C:\\Program Files\\dotnet\\;C:\\Program Files\\WindowsApps\\Microsoft.PowerShell_7.6.1.0_x64__8wekyb3d8bbwe;C:\\Program Files\\Python311\\Scripts\\;C:\\Program Files\\Python311\\;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Windows\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs\\;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR;C:\\Program Files\\starship\\bin\\;C:\\Program Files\\dotnet\\;C:\\Users\\ASUS\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\ASUS\\AppData\\Roaming\\npm;C:\\Users\\ASUS\\AppData\\Local\\Programs\\Antigravity\\bin;C:\\Users\\ASUS\\AppData\\Local\\Microsoft\\WinGet\\Packages\\GitHub.Copilot_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\\Users\\ASUS\\AppData\\Local\\Microsoft\\WinGet\\Links;;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\usr\\bin",
+    "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY;.PYW;.CPL",
+    "PROCESSOR_ARCHITECTURE": "AMD64",
+    "PROCESSOR_IDENTIFIER": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+    "PROCESSOR_LEVEL": "6",
+    "PROCESSOR_REVISION": "8d01",
+    "ProgramData": "C:\\ProgramData",
+    "ProgramFiles": "C:\\Program Files",
+    "ProgramFiles(x86)": "C:\\Program Files (x86)",
+    "ProgramW6432": "C:\\Program Files",
+    "PSModulePath": "C:\\Users\\ASUS\\Documents\\PowerShell\\Modules;C:\\Program Files\\PowerShell\\Modules;c:\\program files\\windowsapps\\microsoft.powershell_7.6.1.0_x64__8wekyb3d8bbwe\\Modules;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules",
+    "PUBLIC": "C:\\Users\\Public",
+    "RlsSvcPort": "22112",
+    "SESSIONNAME": "Console",
+    "SystemDrive": "C:",
+    "SystemRoot": "C:\\Windows",
+    "TEMP": "C:\\Users\\ASUS\\AppData\\Local\\Temp",
+    "TMP": "C:\\Users\\ASUS\\AppData\\Local\\Temp",
+    "USERDOMAIN": "ICARUS",
+    "USERDOMAIN_ROAMINGPROFILE": "ICARUS",
+    "USERNAME": "ASUS",
+    "USERPROFILE": "C:\\Users\\ASUS",
+    "windir": "C:\\Windows",
+    "WSLENV": "WT_SESSION:WT_PROFILE_ID:",
+    "WT_PROFILE_ID": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+    "WT_SESSION": "ee4aef2a-cd6c-4b52-9127-b7fdc96823af",
+    "ZES_ENABLE_SYSMAN": "1"
+  },
+  "sharedObjects": [
+    "C:\\Users\\ASUS\\AppData\\Roaming\\npm\\node_modules\\@github\\copilot\\node_modules\\@github\\copilot-win32-x64\\copilot.exe",
+    "C:\\Windows\\SYSTEM32\\ntdll.dll",
+    "C:\\Windows\\System32\\KERNEL32.DLL",
+    "C:\\Windows\\System32\\KERNELBASE.dll",
+    "C:\\Windows\\System32\\CRYPT32.dll",
+    "C:\\Windows\\System32\\ucrtbase.dll",
+    "C:\\Windows\\System32\\WS2_32.dll",
+    "C:\\Windows\\System32\\RPCRT4.dll",
+    "C:\\Windows\\System32\\USER32.dll",
+    "C:\\Windows\\System32\\win32u.dll",
+    "C:\\Windows\\System32\\GDI32.dll",
+    "C:\\Windows\\System32\\gdi32full.dll",
+    "C:\\Windows\\System32\\msvcp_win.dll",
+    "C:\\Windows\\System32\\ADVAPI32.dll",
+    "C:\\Windows\\System32\\msvcrt.dll",
+    "C:\\Windows\\System32\\sechost.dll",
+    "C:\\Windows\\System32\\SHELL32.dll",
+    "C:\\Windows\\System32\\ole32.dll",
+    "C:\\Windows\\System32\\combase.dll",
+    "C:\\Windows\\SYSTEM32\\dbghelp.dll",
+    "C:\\Windows\\SYSTEM32\\USERENV.dll",
+    "C:\\Windows\\SYSTEM32\\IPHLPAPI.DLL",
+    "C:\\Windows\\SYSTEM32\\WINMM.dll",
+    "C:\\Windows\\SYSTEM32\\dbgcore.DLL",
+    "C:\\Windows\\System32\\OLEAUT32.dll",
+    "C:\\Windows\\SYSTEM32\\CRYPTBASE.DLL",
+    "C:\\Windows\\System32\\IMM32.DLL",
+    "C:\\Program Files\\Windhawk\\Engine\\1.7.3\\64\\windhawk.dll",
+    "C:\\ProgramData\\Windhawk\\Engine\\Mods\\64\\explorer-details-better-file-sizes_1.5_161455.dll",
+    "C:\\ProgramData\\Windhawk\\Engine\\Mods\\64\\libc++.whl",
+    "C:\\ProgramData\\Windhawk\\Engine\\Mods\\64\\libunwind.whl",
+    "C:\\Windows\\SYSTEM32\\PROPSYS.dll",
+    "C:\\ProgramData\\Windhawk\\Engine\\Mods\\64\\dark-menus_1.4.2_308923.dll",
+    "C:\\Windows\\SYSTEM32\\UxTheme.dll",
+    "C:\\ProgramData\\Windhawk\\Engine\\Mods\\64\\invisible-borders_1.0.0_381180.dll",
+    "C:\\Windows\\SYSTEM32\\dwmapi.dll",
+    "C:\\Windows\\SYSTEM32\\powrprof.dll",
+    "C:\\Windows\\SYSTEM32\\UMPDC.dll",
+    "C:\\Windows\\system32\\mswsock.dll",
+    "C:\\Windows\\SYSTEM32\\CRYPTSP.dll",
+    "C:\\Windows\\system32\\rsaenh.dll",
+    "C:\\Windows\\System32\\bcryptPrimitives.dll",
+    "C:\\Windows\\SYSTEM32\\kernel.appcore.dll",
+    "\\\\?\\C:\\Users\\ASUS\\AppData\\Local\\copilot\\pkg\\universal\\1.0.48\\prebuilds\\win32-x64\\win32-native.node",
+    "C:\\Windows\\SYSTEM32\\VCRUNTIME140.dll",
+    "C:\\Windows\\System32\\NSI.dll",
+    "C:\\Windows\\SYSTEM32\\dhcpcsvc6.DLL",
+    "C:\\Windows\\SYSTEM32\\dhcpcsvc.DLL",
+    "C:\\Windows\\SYSTEM32\\DNSAPI.dll",
+    "C:\\Windows\\system32\\napinsp.dll",
+    "C:\\Windows\\System32\\winrnr.dll",
+    "C:\\Windows\\system32\\nlansp_c.dll",
+    "C:\\Windows\\system32\\wshbth.dll",
+    "C:\\Windows\\SYSTEM32\\MSASN1.dll",
+    "\\\\?\\C:\\Users\\ASUS\\AppData\\Local\\copilot\\pkg\\universal\\1.0.48\\prebuilds\\win32-x64\\keytar.node",
+    "C:\\Windows\\System32\\rasadhlp.dll",
+    "C:\\Windows\\System32\\fwpuclnt.dll",
+    "\\\\?\\C:\\Users\\ASUS\\AppData\\Local\\copilot\\pkg\\universal\\1.0.48\\prebuilds\\win32-x64\\runtime.node",
+    "\\\\?\\C:\\Users\\ASUS\\AppData\\Local\\copilot\\pkg\\universal\\1.0.48\\prebuilds\\win32-x64\\icu-native.node",
+    "C:\\Windows\\SYSTEM32\\ntmarta.dll",
+    "C:\\Windows\\SYSTEM32\\windows.staterepositorycore.dll",
+    "C:\\Windows\\SYSTEM32\\bcrypt.dll",
+    "C:\\Windows\\SYSTEM32\\apisethost.appexecutionalias.dll",
+    "C:\\Windows\\SYSTEM32\\profapi.dll",
+    "C:\\Windows\\System32\\windows.storage.dll",
+    "C:\\Windows\\System32\\SHCORE.dll",
+    "C:\\Windows\\System32\\shlwapi.dll",
+    "C:\\Windows\\SYSTEM32\\daxexec.dll",
+    "C:\\Windows\\SYSTEM32\\ncrypt.dll",
+    "C:\\Windows\\SYSTEM32\\MPR.dll",
+    "C:\\Windows\\SYSTEM32\\container.dll",
+    "C:\\Windows\\SYSTEM32\\NTASN1.dll",
+    "C:\\Windows\\System32\\clbcatq.dll",
+    "C:\\Windows\\System32\\Windows.StateRepositoryPS.dll",
+    "C:\\Windows\\SYSTEM32\\AppXAllUserStore.dll",
+    "C:\\Windows\\SYSTEM32\\windows.staterepositoryclient.dll",
+    "C:\\Windows\\SYSTEM32\\capauthz.dll",
+    "\\\\?\\C:\\Users\\ASUS\\AppData\\Local\\copilot\\pkg\\universal\\1.0.48\\prebuilds\\win32-x64\\conpty.node",
+    "\\\\?\\C:\\Users\\ASUS\\AppData\\Local\\copilot\\pkg\\universal\\1.0.48\\clipboard\\node_modules\\@teddyzhu\\clipboard-win32-x64-msvc\\clipboard.win32-x64-msvc.node",
+    "C:\\Windows\\SYSTEM32\\wtdccm.dll"
+  ]
+}

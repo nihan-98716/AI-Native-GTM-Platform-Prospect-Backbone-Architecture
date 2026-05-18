@@ -47,10 +47,10 @@ export default function Sidebar() {
         </div>
         <nav className="px-2 py-4" aria-label="Main navigation">
           <ul>
-            <li className="mb-2"><Link href="/">Dashboard</Link></li>
+            <li className="mb-2"><Link href="/dashboard">Dashboard</Link></li>
             <li className="mb-2"><Link href="/accounts">Accounts</Link></li>
             {showWorkflows && <li className="mb-2"><Link href="/workflows">Workflows</Link></li>}
-            <li className="mb-2"><Link href="/integrations">Integrations</Link></li>
+            <li className="mb-2"><Link href="/settings/integrations">Integrations</Link></li>
           </ul>
         </nav>
       </aside>
@@ -66,10 +66,10 @@ export default function Sidebar() {
             </div>
             <nav className="mt-4" aria-label="Mobile navigation">
               <ul>
-                <li className="mb-2"><Link href="/">Dashboard</Link></li>
+                <li className="mb-2"><Link href="/dashboard">Dashboard</Link></li>
                 <li className="mb-2"><Link href="/accounts">Accounts</Link></li>
                 {showWorkflows && <li className="mb-2"><Link href="/workflows">Workflows</Link></li>}
-                <li className="mb-2"><Link href="/integrations">Integrations</Link></li>
+                <li className="mb-2"><Link href="/settings/integrations">Integrations</Link></li>
               </ul>
             </nav>
           </div>
