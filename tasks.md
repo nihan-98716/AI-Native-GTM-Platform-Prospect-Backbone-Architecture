@@ -95,7 +95,7 @@ Status: Completed
 Task: Create `/backbone/app/contracts/integrations`
 Priority: P0
 Dependencies: Architecture freeze after Phase 1
-Status: Pending
+Status: Completed
 
 Task: Create `/backbone/app/contracts/workflows`
 Priority: P0
@@ -230,22 +230,22 @@ Status: Completed
 Task: Implement one real Prospect-powering integration provider, preferably Apollo
 Priority: P0
 Dependencies: Integration framework
-Status: Pending
+Status: Completed
 
 Task: Implement integration states `not_configured`, `live`, `failed`, and `rate_limited`
 Priority: P0
 Dependencies: Integration framework
-Status: Pending
+Status: Completed
 
 Task: Persist integration run provider, request metadata, status, errors, counts, and data provenance
 Priority: P0
 Dependencies: Integration framework
-Status: Pending
+Status: Completed
 
 Task: Implement provider auth variants for `api_key`, `oauth2`, and `manual_config`
 Priority: P0
 Dependencies: Integration framework
-Status: Pending
+Status: Completed
 
 Task: Persist `source_provider`, `source_type`, `ingestion_timestamp`, and `source_record_id` on imported or generated records where provenance is required
 Priority: P0

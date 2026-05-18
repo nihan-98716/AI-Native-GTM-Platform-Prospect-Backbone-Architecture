@@ -28,12 +28,25 @@ class SqlProspectWorkflowRepository:
         self._session = session
         self._obs = observability or get_observability_runtime()
 
-    def _emit(self, *, service: str, status: str, started: float, tenant_id: str | None = None) -> None:
+    def _emit(
+        self,
+        *,
+        service: str,
+        status: str,
+        started: float,
+        tenant_id: str | None = None,
+        workflow_id: str | None = None,
+        trace_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> None:
         self._obs.emit_operation(
             service=service,
             status=status,
-            duration_ms=int((time.perf_counter() - started) * 1000),
+            duration_ms=max(1, int((time.perf_counter() - started) * 1000)),
             tenant_id=tenant_id,
+            workflow_id=workflow_id,
+            trace_id=trace_id,
+            correlation_id=correlation_id,
         )
 
     @staticmethod
@@ -134,7 +147,7 @@ class SqlProspectWorkflowRepository:
         row = self._session.execute(
             select(WorkflowRun).where(WorkflowRun.tenant_id == tenant_id, WorkflowRun.id == workflow_run_id)
         ).scalar_one_or_none()
-        self._emit(service="repositories.prospect.get_workflow_run", status="ok", started=started, tenant_id=tenant_id)
+        self._emit(service="repositories.prospect.get_workflow_run", status="ok", started=started, tenant_id=tenant_id, workflow_id=workflow_run_id)
         return self._workflow_run_record(row) if row else None
 
     def get_workflow_run_by_idempotency(self, *, tenant_id: str, idempotency_key: str) -> WorkflowRunToolRecord | None:
@@ -150,6 +163,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=row.id if row else None,
         )
         return self._workflow_run_record(row) if row else None
 
@@ -172,6 +186,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=command.tenant_id,
+            workflow_id=row.id,
         )
         return self._workflow_run_record(row)
 
@@ -199,6 +214,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return self._workflow_run_record(row)
 
@@ -240,6 +256,9 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
+            trace_id=trace_id,
+            correlation_id=correlation_id,
         )
         return WorkflowStepRecord(
             tenant_id=tenant_id,
@@ -294,6 +313,9 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
+            trace_id=trace_id,
+            correlation_id=correlation_id,
         )
         return ToolCallRecord(
             tenant_id=tenant_id,
@@ -332,6 +354,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return ApprovalCheckpoint(
             approval_request_id=row.id,
@@ -360,6 +383,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=row.workflow_run_id if row else None,
         )
         if row is None:
             return None
@@ -402,6 +426,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=row.workflow_run_id,
         )
         return ApprovalCheckpoint(
             approval_request_id=row.id,
@@ -447,6 +472,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return row.id
 
@@ -484,6 +510,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return row.id
 
@@ -515,6 +542,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return row.id
 
@@ -531,6 +559,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return int(count or 0)
 
@@ -547,6 +576,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return int(count or 0)
 
@@ -563,6 +593,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return int(count or 0)
 
@@ -579,6 +610,7 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return int(count or 0)
 
@@ -600,5 +632,6 @@ class SqlProspectWorkflowRepository:
             status="ok",
             started=started,
             tenant_id=tenant_id,
+            workflow_id=workflow_run_id,
         )
         return round(total_cost, 6), total_latency

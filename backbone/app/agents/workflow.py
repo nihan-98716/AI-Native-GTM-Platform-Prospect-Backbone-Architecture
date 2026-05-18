@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import time
 
 from langgraph.graph import END, StateGraph
@@ -77,12 +79,16 @@ class ProspectWorkflowEngine:
             )
 
         def agent_context(current: ProspectWorkflowExecutionState, prompt_name: str) -> AgentExecutionContext:
+            trace_id = current.traces[-1].trace_id if current.traces and current.traces[-1].trace_id else str(uuid4())
+            correlation_id = current.traces[-1].correlation_id if current.traces and current.traces[-1].correlation_id else str(uuid4())
             return AgentExecutionContext(
                 tenant_id=current.tenant_id,
                 workflow_run_id=current.workflow_run_id,
                 current_step=current.current_step or "",
                 approval_status=current.approval_status,
                 prompt_name=prompt_name,
+                trace_id=trace_id,
+                correlation_id=correlation_id,
             )
 
         def persist_state(updated_state: ProspectWorkflowExecutionState) -> None:

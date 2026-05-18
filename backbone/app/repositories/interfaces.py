@@ -2,6 +2,16 @@ from typing import Protocol, Sequence
 
 from app.contracts.api.accounts import AccountSummary
 from app.contracts.events.audit import AuditEventRecord, AuditEventScoped
+from app.contracts.integrations import (
+    IntegrationConnectionCreate,
+    IntegrationConnectionRecord,
+    IntegrationConnectionUpdate,
+    IntegrationCredentials,
+    IntegrationExecutionRecord,
+    IntegrationExecutionRequest,
+    IntegrationSyncRecord,
+    IntegrationSyncRequest,
+)
 from app.contracts.tools.prospect import (
     AccountToolRecord,
     ApprovalCheckpoint,
@@ -22,6 +32,87 @@ class AccountRepository(Protocol):
 
 class AuditEventRepository(Protocol):
     def create(self, event: AuditEventScoped) -> AuditEventRecord:
+        ...
+
+
+class IntegrationRepository(Protocol):
+    def list_connections(self, *, tenant_id: str, provider: str | None = None) -> Sequence[IntegrationConnectionRecord]:
+        ...
+
+    def get_connection(self, *, tenant_id: str, connection_id: str) -> IntegrationConnectionRecord | None:
+        ...
+
+    def get_connection_credentials(self, *, tenant_id: str, connection_id: str) -> IntegrationCredentials | None:
+        ...
+
+    def get_default_connection(self, *, tenant_id: str, provider: str) -> IntegrationConnectionRecord | None:
+        ...
+
+    def save_connection(
+        self,
+        command: IntegrationConnectionCreate,
+        *,
+        encrypted_credentials: bytes | None = None,
+        status: str | None = None,
+    ) -> IntegrationConnectionRecord:
+        ...
+
+    def update_connection(
+        self,
+        *,
+        tenant_id: str,
+        connection_id: str,
+        update: IntegrationConnectionUpdate,
+    ) -> IntegrationConnectionRecord:
+        ...
+
+    def create_execution_run(
+        self,
+        request: IntegrationExecutionRequest,
+        *,
+        status: str,
+        response_metadata: dict | None = None,
+        counts: dict | None = None,
+        error_message: str | None = None,
+        started_at=None,
+        finished_at=None,
+    ) -> IntegrationExecutionRecord:
+        ...
+
+    def update_execution_run(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        status: str,
+        response_metadata: dict | None = None,
+        counts: dict | None = None,
+        error_message: str | None = None,
+        started_at=None,
+        finished_at=None,
+    ) -> IntegrationExecutionRecord:
+        ...
+
+    def get_sync_cursor(
+        self,
+        *,
+        tenant_id: str,
+        connection_id: str,
+        cursor_name: str,
+    ) -> IntegrationSyncRecord | None:
+        ...
+
+    def save_sync_cursor(
+        self,
+        request: IntegrationSyncRequest,
+        *,
+        status: str,
+        response_metadata: dict | None = None,
+        error_message: str | None = None,
+        source_record_id: str | None = None,
+        started_at=None,
+        finished_at=None,
+    ) -> IntegrationSyncRecord:
         ...
 
 

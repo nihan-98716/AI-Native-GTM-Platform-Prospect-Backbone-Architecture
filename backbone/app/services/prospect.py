@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from app.agents.llm import AgentLLM, OpenAIChatLLM
 from app.agents.tools.runtime import DefaultProspectAgentTools
 from app.agents.workflow import ProspectWorkflowEngine
@@ -14,6 +16,8 @@ from app.contracts.workflows.execution import WorkflowEvidence, ProspectWorkflow
 from app.contracts.workflows.lifecycle import WorkflowStart, WorkflowStartInput
 from app.core.tenancy import TenantContext
 from app.repositories.interfaces import ProspectWorkflowRepository
+from app.services.integrations import IntegrationService
+from app.workers.workflow import ProspectWorkflowWorker
 
 
 class ProspectWorkflowService:
@@ -21,12 +25,14 @@ class ProspectWorkflowService:
         self,
         repository: ProspectWorkflowRepository,
         audit_service: AuditService | None = None,
+        integration_service: IntegrationService | None = None,
         llm: AgentLLM | None = None,
     ) -> None:
         self._repository = repository
-        self._tools = DefaultProspectAgentTools(repository, audit_service=audit_service)
+        self._tools = DefaultProspectAgentTools(repository, audit_service=audit_service, integration_service=integration_service)
         self._llm = llm or OpenAIChatLLM.from_settings()
         self._engine = ProspectWorkflowEngine(self._tools, self._llm)
+        self._worker = ProspectWorkflowWorker(repository)
 
     def start_workflow(self, context: TenantContext, request: StartProspectWorkflowRequest) -> ProspectWorkflowActionResponse:
         existing = self._repository.get_workflow_run_by_idempotency(
@@ -64,16 +70,13 @@ class ProspectWorkflowService:
             require_human_approval=request.require_human_approval,
             status=WorkflowStatus.running,
             current_step="research",
+            source_provider="prospect-workflow",
+            source_type="generated",
+            ingestion_timestamp=datetime.now(tz=UTC),
+            source_record_id=run.workflow_run_id,
             evidence=WorkflowEvidence(),
         )
-        self._repository.update_workflow_run_status(
-            tenant_id=context.tenant_id,
-            workflow_run_id=run.workflow_run_id,
-            status=WorkflowStatus.running.value,
-            output=initial_state.model_dump(mode="json"),
-            heartbeat=True,
-        )
-        state = self._engine.execute(initial_state, context=context)
+        state = self._worker.run_inline(initial_state, context=context, execute=self._engine.execute)
         return self._action_response(state)
 
     def resume_workflow(self, context: TenantContext, request: ResumeProspectWorkflowRequest) -> ProspectWorkflowActionResponse:
@@ -118,14 +121,11 @@ class ProspectWorkflowService:
         state = self._state_from_run(run, approval_status=ApprovalStatus.approved, approval_request_id=checkpoint.approval_request_id)
         state.status = WorkflowStatus.running
         state.current_step = "approval_gate"
-        self._repository.update_workflow_run_status(
-            tenant_id=context.tenant_id,
-            workflow_run_id=request.workflow_run_id,
-            status=WorkflowStatus.running.value,
-            output=state.model_dump(mode="json"),
-            heartbeat=True,
-        )
-        resumed = self._engine.execute(state, context=context)
+        state.source_provider = state.source_provider or "prospect-workflow"
+        state.source_type = state.source_type or "generated"
+        state.source_record_id = state.source_record_id or request.workflow_run_id
+        state.ingestion_timestamp = state.ingestion_timestamp or datetime.now(tz=UTC)
+        resumed = self._worker.run_inline(state, context=context, execute=self._engine.execute)
         return self._action_response(resumed)
 
     def get_status(self, context: TenantContext, workflow_run_id: str) -> ProspectWorkflowStatusResponse:
@@ -162,6 +162,13 @@ class ProspectWorkflowService:
         payload.setdefault("workflow_type", run.workflow_type)
         payload.setdefault("idempotency_key", run.input.get("metadata", {}).get("idempotency_key", ""))
         payload.setdefault("require_human_approval", run.input.get("metadata", {}).get("require_human_approval", True))
+        payload.setdefault("source_provider", run.output.get("source_provider") or "prospect-workflow")
+        payload.setdefault("source_type", run.output.get("source_type") or "generated")
+        payload.setdefault("source_record_id", run.output.get("source_record_id") or run.workflow_run_id)
+        payload.setdefault("ingestion_timestamp", run.output.get("ingestion_timestamp"))
+        payload.setdefault("retry_count", run.output.get("retry_count", 0))
+        payload.setdefault("attempt_metadata", run.output.get("attempt_metadata", []))
+        payload.setdefault("evidence", run.output.get("evidence", {}))
         state = ProspectWorkflowExecutionState.model_validate(payload)
         if approval_status is not None:
             state.approval_status = approval_status

@@ -63,10 +63,31 @@ class ProspectResearchAgent:
                             "additionalProperties": False,
                         },
                     ),
+                    LLMToolSpec(
+                        name="search_provider_accounts",
+                        description="Ask the live integration provider to source additional accounts for the tenant.",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "query": {"type": "string"},
+                                "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                            },
+                            "required": ["limit"],
+                            "additionalProperties": False,
+                        },
+                    ),
                 ],
                 tool_handlers={
                     "get_icp": fetch_icp,
                     "get_accounts": fetch_accounts,
+                    "search_provider_accounts": lambda arguments: self._tools.search_provider_accounts(
+                        tenant_id=payload.tenant_id,
+                        workflow_run_id=payload.workflow_run_id,
+                        query=arguments.get("query") or None,
+                        limit=int(arguments.get("limit", payload.account_limit)),
+                        trace_id=context.trace_id if context else None,
+                        correlation_id=context.correlation_id if context else None,
+                    ),
                 },
             )
             return plan.payload, plan.reasoning_summary, plan.tool_invocations

@@ -54,7 +54,23 @@ class IntentSignalAgent:
                             "required": ["account_ids"],
                             "additionalProperties": False,
                         },
-                    )
+                    ),
+                    LLMToolSpec(
+                        name="discover_provider_signals",
+                        description="Ask the live integration provider to discover additional signals for the supplied account identifiers.",
+                        parameters={
+                            "type": "object",
+                            "properties": {
+                                "account_ids": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                }
+                            },
+                            "required": ["account_ids"],
+                            "additionalProperties": False,
+                        },
+                    ),
                 ],
                 tool_handlers={
                     "get_signals": lambda arguments: [
@@ -63,7 +79,14 @@ class IntentSignalAgent:
                             tenant_id=payload.tenant_id,
                             account_ids=list(arguments.get("account_ids", payload.account_ids)),
                         )
-                    ]
+                    ],
+                    "discover_provider_signals": lambda arguments: self._tools.discover_provider_signals(
+                        tenant_id=payload.tenant_id,
+                        workflow_run_id=payload.workflow_run_id,
+                        account_ids=list(arguments.get("account_ids", payload.account_ids)),
+                        trace_id=context.trace_id if context else None,
+                        correlation_id=context.correlation_id if context else None,
+                    ),
                 },
             )
             return plan.payload, plan.reasoning_summary, plan.tool_invocations
