@@ -31,10 +31,15 @@ export function useWorkflowList(limit = 50, offset = 0) {
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    fetchWithAuth(`/v1/workflows?limit=${limit}&offset=${offset}`)
+    fetchWithAuth(`/api/workflows?limit=${limit}&offset=${offset}`)
       .then((resp: any) => {
         const data = resp?.data || resp
-        setItems(data?.items || [])
+        const items = (data?.items || []).map((item: any) => ({
+          ...item,
+          workflow_id: item.workflow_id ?? item.workflow_run_id ?? item.run_id ?? item.id,
+          workflow_status: item.workflow_status ?? item.status,
+        }))
+        setItems(items)
         setCount(data?.count || 0)
       })
       .catch((e: any) => setError(String(e)))
@@ -57,7 +62,7 @@ export function useWorkflowDetail(id: string | null) {
     if (!id) return
     let mounted = true
     setLoading(true)
-    fetchWithAuth(`/v1/workflows/${id}`)
+    fetchWithAuth(`/api/workflows/${id}`)
       .then((resp: any) => {
         const data = resp?.data || resp
         if (mounted) setDetail(data)

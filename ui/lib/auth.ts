@@ -3,10 +3,9 @@ type Claims = { sub?: string; tenant_id?: string; roles?: string[]; permissions?
 function base64UrlDecode(input: string) {
   // base64url -> base64
   input = input.replace(/-/g, '+').replace(/_/g, '/')
-  const pad = input.length % 4
-  if (pad === 2) input += '=='
-  else if (pad === 3) input += '='
-  else if (pad !== 0) input += '=== '
+  while (input.length % 4 !== 0) {
+    input += '='
+  }
   try {
     return decodeURIComponent(
       atob(input)
@@ -37,6 +36,10 @@ export function decodeJwt(token: string): Claims | null {
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('token')
+}
+
+export function getBootstrapToken(): string | null {
+  return process.env.NEXT_PUBLIC_BOOTSTRAP_TOKEN || null
 }
 
 export function setToken(token: string | null): void {

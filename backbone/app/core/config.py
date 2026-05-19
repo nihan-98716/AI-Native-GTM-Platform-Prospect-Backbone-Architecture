@@ -52,7 +52,7 @@ class Settings:
         return cls(
             app_name=os.getenv("APP_NAME", "gtm-backbone"),
             environment=os.getenv("APP_ENV", "development"),
-            database_url=os.getenv("DATABASE_URL", "postgresql+psycopg://gtm:gtm@postgres:5432/gtm"),
+            database_url=os.getenv("DATABASE_URL", "postgresql+psycopg://gtm:gtm@127.0.0.1:5432/gtm"),
             jwt_secret=os.getenv("JWT_SECRET", "change-me"),
             jwt_audience=os.getenv("JWT_AUDIENCE", "gtm-api"),
             jwt_issuer=os.getenv("JWT_ISSUER", "gtm-local"),

@@ -30,9 +30,15 @@ class ProspectWorkflowService:
     ) -> None:
         self._repository = repository
         self._tools = DefaultProspectAgentTools(repository, audit_service=audit_service, integration_service=integration_service)
-        self._llm = llm or OpenAIChatLLM.from_settings()
-        self._engine = ProspectWorkflowEngine(self._tools, self._llm)
+        self._llm = llm
+        self._engine = ProspectWorkflowEngine(self._tools, llm) if llm is not None else None
         self._worker = ProspectWorkflowWorker(repository)
+
+    def _workflow_engine(self) -> ProspectWorkflowEngine:
+        if self._engine is None:
+            self._llm = OpenAIChatLLM.from_settings()
+            self._engine = ProspectWorkflowEngine(self._tools, self._llm)
+        return self._engine
 
     def start_workflow(self, context: TenantContext, request: StartProspectWorkflowRequest) -> ProspectWorkflowActionResponse:
         existing = self._repository.get_workflow_run_by_idempotency(
@@ -76,7 +82,7 @@ class ProspectWorkflowService:
             source_record_id=run.workflow_run_id,
             evidence=WorkflowEvidence(),
         )
-        state = self._worker.run_inline(initial_state, context=context, execute=self._engine.execute)
+        state = self._worker.run_inline(initial_state, context=context, execute=self._workflow_engine().execute)
         return self._action_response(state)
 
     def resume_workflow(self, context: TenantContext, request: ResumeProspectWorkflowRequest) -> ProspectWorkflowActionResponse:
@@ -125,7 +131,7 @@ class ProspectWorkflowService:
         state.source_type = state.source_type or "generated"
         state.source_record_id = state.source_record_id or request.workflow_run_id
         state.ingestion_timestamp = state.ingestion_timestamp or datetime.now(tz=UTC)
-        resumed = self._worker.run_inline(state, context=context, execute=self._engine.execute)
+        resumed = self._worker.run_inline(state, context=context, execute=self._workflow_engine().execute)
         return self._action_response(resumed)
 
     def get_status(self, context: TenantContext, workflow_run_id: str) -> ProspectWorkflowStatusResponse:
