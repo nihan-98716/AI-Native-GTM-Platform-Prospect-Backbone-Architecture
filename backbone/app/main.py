@@ -12,6 +12,7 @@ from app.api.v1 import workflows as workflows_router
 from app.core.config import get_settings
 from app.observability.logging import request_log_fields
 from app.seed.loader import SeedLoader
+from app.seed.demo_generator import DemoDataGenerator
 from app.storage.db import session_scope
 
 
@@ -54,8 +55,33 @@ async def observe_request(request: Request, call_next):
 def startup_seed():
     if not settings.auto_seed_on_startup:
         return
-    with session_scope() as session:
-        SeedLoader(seed_dir=settings.seed_dir).seed(session=session)
+    
+    logger.info("[startup] Auto-seeding enabled")
+    seed_loaded = False
+    
+    # Try SeedLoader (YAML)
+    try:
+        with session_scope() as session:
+            loader = SeedLoader(seed_dir=settings.seed_dir)
+            counts = loader.seed(session=session)
+            logger.info(f"[startup] Seed data loaded from YAML: {counts}")
+            seed_loaded = True
+    except Exception as e:
+        logger.warning(f"[startup] SeedLoader failed (expected if YAMLs missing): {e}")
+
+    # Fallback to DemoDataGenerator
+    if not seed_loaded:
+        try:
+            with session_scope() as session:
+                generator = DemoDataGenerator(session)
+                counts = generator.generate_all()
+                logger.info(f"[startup] Demo data generated: {counts}")
+                seed_loaded = True
+        except Exception as e:
+            logger.error(f"[startup] DemoDataGenerator failed: {e}")
+
+    if not seed_loaded:
+        logger.warning("[startup] No seed data was loaded")
 
 
 @app.get("/healthz")
