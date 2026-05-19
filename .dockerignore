@@ -9,8 +9,8 @@ venv
 **/*.pyc
 **/*.pyo
 **/*.pyd
-ui/node_modules
-ui/.next
-ui/playwright-report
-ui/test-results
+prospect/node_modules
+prospect/.next
+prospect/playwright-report
+prospect/test-results
 AppData
