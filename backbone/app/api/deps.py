@@ -4,7 +4,6 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.audit.service import SqlAuditService
-from app.agents.llm import OpenAIChatLLM
 from app.auth import Hs256TokenVerifier, RbacAuthorizer, TokenValidationError
 from app.contracts.api.auth import TokenClaims
 from app.core.config import Settings, get_settings
@@ -81,10 +80,6 @@ def get_audit_service(session: Session = Depends(get_db_session)) -> SqlAuditSer
     return SqlAuditService(repository=SqlAuditEventRepository(session))
 
 
-def get_agent_llm(settings: Settings = Depends(get_settings)) -> OpenAIChatLLM:
-    return OpenAIChatLLM.from_settings(settings)
-
-
 def get_integration_provider_registry(settings: Settings = Depends(get_settings)) -> IntegrationProviderRegistry:
     providers = []
     enabled = settings.integration_providers or [settings.integration_default_provider]
@@ -120,12 +115,10 @@ def get_prospect_workflow_service(
     session: Session = Depends(get_db_session),
     audit_service: SqlAuditService = Depends(get_audit_service),
     integration_service: IntegrationService = Depends(get_integration_service),
-    llm: OpenAIChatLLM = Depends(get_agent_llm),
 ) -> ProspectWorkflowService:
     return ProspectWorkflowService(
         repository=SqlProspectWorkflowRepository(session),
         audit_service=audit_service,
         integration_service=integration_service,
-        llm=llm,
     )
 
