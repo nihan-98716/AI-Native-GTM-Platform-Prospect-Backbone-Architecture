@@ -72,7 +72,7 @@ The platform includes a complete **Prospect** vertical slice:
 - [Deployment & Runtime](docs/deployment.md)
 
 ## Video Demo
-*(Placeholder for submission video)*
+[*Demo Link*](https://drive.google.com/file/d/1dM3-gtnOx58c5XcmHytdCGDB2V3FN0iv/view?usp=sharing)
 
 ## Known Limitations
 - The system currently supports a single concurrent integration provider (Apollo).
